@@ -7,7 +7,7 @@ import (
 
 	"github.com/danilov-go/gophkeeper/internal/config"
 	"github.com/danilov-go/gophkeeper/internal/logger"
-	"github.com/danilov-go/gophkeeper/internal/server"
+	server "github.com/danilov-go/gophkeeper/internal/server/http"
 	"github.com/go-chi/chi"
 	"golang.org/x/sync/errgroup"
 )

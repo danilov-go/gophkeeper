@@ -6,17 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/danilov-go/gophkeeper/internal/models"
 	"github.com/go-resty/resty/v2"
 )
 
 type log interface {
 	Errorw(msg string, keysAndValues ...any)
-}
-
-// loginPassword описывает JSON-структуру для отправки на сервер.
-type loginPassword struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
 }
 
 // HTTPSender отвечает за сетевое взаимодействие с сервером по протоколу HTTPS.
@@ -40,7 +35,6 @@ func NewHTTPSender(serverURL string, key string, l log) *HTTPSender {
 			}
 			return time.Duration(1+2*(attempt-1)) * time.Second, nil
 		})
-
 	return &HTTPSender{
 		client: client,
 		logger: l,
@@ -50,7 +44,7 @@ func NewHTTPSender(serverURL string, key string, l log) *HTTPSender {
 
 // Register отправляет запрос на регистрацию нового пользователя.
 func (s *HTTPSender) Register(ctx context.Context, login, password string) error {
-	reqBody := loginPassword{
+	reqBody := models.LoginPassword{
 		Login:    login,
 		Password: password,
 	}
@@ -63,7 +57,7 @@ func (s *HTTPSender) Register(ctx context.Context, login, password string) error
 		return err
 	}
 	if resp.IsError() {
-		s.logger.Errorw("при авторизации сервер вернул ошибку", "status", resp.Status())
+		s.logger.Errorw("при регистрации сервер вернул ошибку", "status", resp.Status())
 		return fmt.Errorf("статус ответа от сервера: %s", resp.Status())
 	}
 	token := resp.Header().Get("Authorization")
@@ -74,9 +68,9 @@ func (s *HTTPSender) Register(ctx context.Context, login, password string) error
 	return nil
 }
 
-// Login выполняет аутентификацию пользователя на сервере и сохраняет JWT-токен.
+// Auth выполняет аутентификацию пользователя на сервере и сохраняет JWT-токен.
 func (s *HTTPSender) Auth(ctx context.Context, login, password string) error {
-	reqBody := loginPassword{
+	reqBody := models.LoginPassword{
 		Login:    login,
 		Password: password,
 	}

@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	"net"
 	"strconv"
 	"strings"
 )
@@ -46,18 +45,4 @@ func (n *NetAddress) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	return n.Set(str)
-}
-
-func GetHost(adr string) (string, error) {
-	conn, err := net.Dial("udp", adr)
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-	localAddr := conn.LocalAddr()
-	host, _, err := net.SplitHostPort(localAddr.String())
-	if err != nil {
-		return "", err
-	}
-	return host, nil
 }

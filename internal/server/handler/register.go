@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	argonMemory      = 64 * 1024
-	argonIterations  = 3
-	argonParallelism = 2
-	argonSaltLength  = 16
-	argonKeyLength   = 32
+	argonTime    = 3
+	argonMemory  = 64 * 1024
+	argonThreads = 2
+	argonSaltLen = 16
+	argonKeyLen  = 32
 )
 
 type loginPassword struct {
@@ -47,15 +47,15 @@ func BuildJWTString(id int, login, key string) (string, error) {
 
 // Hash возвращает argon2 хеш пароля.
 func Hash(password string) (string, error) {
-	salt := make([]byte, argonSaltLength)
+	salt := make([]byte, argonSaltLen)
 	if _, err := rand.Read(salt); err != nil {
 		return "", err
 	}
-	hash := argon2.IDKey([]byte(password), salt, argonIterations, argonMemory, argonParallelism, argonKeyLength)
+	hash := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
 	encodedHash := fmt.Sprintf(`$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s`,
-		argon2.Version, argonMemory, argonIterations, argonParallelism, b64Salt, b64Hash)
+		argon2.Version, argonMemory, argonTime, argonThreads, b64Salt, b64Hash)
 	return encodedHash, nil
 }
 
