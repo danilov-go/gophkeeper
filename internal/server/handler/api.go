@@ -8,21 +8,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
-
-type secret struct {
-	ID        int               `json:"id,omitempty"`
-	SType     models.SecretType `json:"type"`
-	SBody     []byte            `json:"body"`
-	UpdatedAt time.Time         `json:"updated_at"`
-}
-
-type secretID struct {
-	ID int `json:"id"`
-}
 
 func (h *Handler) SaveSecret() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user AuthUser) {
@@ -39,27 +27,21 @@ func (h *Handler) SaveSecret() LoginHandlerFunc {
 			return
 		}
 		defer r.Body.Close()
-		var secretBody secret
-		err = json.Unmarshal(body, &secretBody)
+		var cipherData models.CipherData
+		err = json.Unmarshal(body, &cipherData)
 		if err != nil {
-			h.logger.Errorw("ошибка десилиризации", "error", err)
+			h.logger.Errorw("ошибка десериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		cipherData := models.CipherData{
-			ID:        secretBody.ID,
-			UserID:    user.ID,
-			Type:      secretBody.SType,
-			Cipher:    secretBody.SBody,
-			UpdatedAt: secretBody.UpdatedAt,
-		}
+		cipherData.UserID = user.ID
 		id, err := h.storage.Save(ctx, user.Login, cipherData)
 		if err != nil {
 			h.logger.Errorw("ошибка сохранения/обновления", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-		res, err := json.Marshal(secretID{ID: id})
+		res, err := json.Marshal(models.SecretID{ID: id})
 		if err != nil {
 			h.logger.Errorw("ошибка сериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -86,18 +68,18 @@ func (h *Handler) GetSecret() LoginHandlerFunc {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		secret, err := h.storage.Get(ctx, user.ID, id)
+		cipherData, err := h.storage.Get(ctx, user.ID, id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				h.logger.Errorw("секрет не найден или доступ запрещен", "id", id, "user_id", user.ID)
+				h.logger.Errorw("секрет не найден", "id", id, "user_id", user.ID)
 				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 				return
 			}
-			h.logger.Errorw("ошибка получения из хранилища", "error", err)
+			h.logger.Errorw("ошибка хранилища", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-		res, err := json.Marshal(secret)
+		res, err := json.Marshal(cipherData)
 		if err != nil {
 			h.logger.Errorw("ошибка сериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -112,18 +94,18 @@ func (h *Handler) GetSecret() LoginHandlerFunc {
 func (h *Handler) GetAllSecret() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user AuthUser) {
 		ctx := r.Context()
-		secrets, err := h.storage.GetAll(ctx, user.ID)
+		cipherData, err := h.storage.GetAll(ctx, user.ID)
 		if err != nil {
-			h.logger.Errorw("ошибка получения из хранилища", "error", err)
+			h.logger.Errorw("ошибка хранилища", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-		if len(secrets) == 0 {
+		if len(cipherData) == 0 {
 			h.logger.Errorw("секреты не найдены", "user_id", user.ID)
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
 		}
-		res, err := json.Marshal(secrets)
+		res, err := json.Marshal(cipherData)
 		if err != nil {
 			h.logger.Errorw("ошибка сериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -153,11 +135,11 @@ func (h *Handler) DeleteSecret() LoginHandlerFunc {
 		err = h.storage.Delete(ctx, user.ID, id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				h.logger.Errorw("секрет не найден или доступ запрещен", "id", id, "user_id", user.ID)
+				h.logger.Errorw("секрет не найден", "id", id, "user_id", user.ID)
 				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 				return
 			}
-			h.logger.Errorw("ошибка удаления секрета", "error", err)
+			h.logger.Errorw("ошибка хранилища", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}

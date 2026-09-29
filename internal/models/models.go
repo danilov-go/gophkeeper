@@ -12,22 +12,15 @@ var (
 	ErrUserNotFound = errors.New("пользователь не найден")
 )
 
-// SecretType определяет тип данных.
-type SecretType string
-
-// Типы секретных данных, поддерживаемые приложением.
-const (
-	TypeLoginPassword SecretType = "login/password"
-	TypeText          SecretType = "text"
-	TypeBinary        SecretType = "binary"
-	TypeCard          SecretType = "card"
-)
-
 // User содержит данные о пользователе.
 type User struct {
 	ID           int
 	Login        string
 	PasswordHash string
+}
+
+type SecretID struct {
+	ID int `json:"id"`
 }
 
 // CipherData содержит зашифрованные данных для использования сервером.
