@@ -30,4 +30,8 @@ type Storage interface {
 	Ping(ctx context.Context) error
 	SaveUser(ctx context.Context, login, passwordHash string) (int, error)
 	GetUser(ctx context.Context, login string) (models.User, error)
+	Save(ctx context.Context, login string, cipherData models.CipherData) (int, error)
+	Get(ctx context.Context, userID, id int) (models.CipherData, error)
+	GetAll(ctx context.Context, userID int) ([]models.CipherData, error)
+	Delete(ctx context.Context, userID, id int) error
 }

@@ -17,10 +17,10 @@ type SecretType string
 
 // Типы секретных данных, поддерживаемые приложением.
 const (
-	TypeUserData SecretType = "login/password"
-	TypeText     SecretType = "text"
-	TypeBinary   SecretType = "binary"
-	TypeCard     SecretType = "card"
+	TypeLoginPassword SecretType = "login/password"
+	TypeText          SecretType = "text"
+	TypeBinary        SecretType = "binary"
+	TypeCard          SecretType = "card"
 )
 
 // User содержит данные о пользователе.
