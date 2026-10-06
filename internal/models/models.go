@@ -28,7 +28,7 @@ type CipherData struct {
 	ID        int        `json:"id,omitempty"`
 	UserID    int        `json:"-"`
 	Type      SecretType `json:"type"`
-	Cipher    []byte     `json:"payload"`
+	Cipher    []byte     `json:"cipher"`
 	UpdatedAt time.Time  `json:"updated_at"`
 }
 

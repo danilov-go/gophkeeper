@@ -66,3 +66,10 @@ func NewSecretData(secretType SecretType, body []byte) (SecretData, error) {
 		return nil, fmt.Errorf("неизвестный тип: %s", secretType)
 	}
 }
+
+type Secret struct {
+	ID   int        `json:"id"`
+	Type SecretType `json:"type"`
+	Data SecretData `json:"data"`
+	Meta MetaData   `json:"meta"`
+}
