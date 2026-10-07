@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/danilov-go/gophkeeper/internal/client/crypto"
+	"github.com/danilov-go/gophkeeper/internal/client/sync"
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
@@ -18,17 +19,26 @@ type Storage interface {
 	DeleteSecret(ctx context.Context, id int) error
 }
 
+type Sender interface {
+	Register(ctx context.Context, login, password string) error
+	Auth(ctx context.Context, login, password string) error
+	Sync(ctx context.Context) error
+}
+
 // ClientService управляет бизнес-логикой.
 type ClientService struct {
 	storage Storage
+	sender  Sender
+	syncer  *sync.SyncWorker
 	key     []byte
 }
 
 // NewClientService создает экземпляр ClientService.
-func NewClientService(storage Storage, secretKey []byte) *ClientService {
+func NewClientService(storage Storage, sender Sender, syncer *sync.SyncWorker) *ClientService {
 	return &ClientService{
 		storage: storage,
-		key:     secretKey,
+		sender:  sender,
+		syncer:  syncer,
 	}
 }
 
@@ -63,11 +73,17 @@ func (s *ClientService) Save(ctx context.Context, meta models.MetaData, data mod
 		Type:   data.SecretType(),
 		Cipher: encryptedBody,
 	}
-	return s.storage.SaveSecret(ctx, cipherData)
+	id, err := s.storage.SaveSecret(ctx, cipherData)
+	s.syncer.RunSync()
+	return id, err
 }
 
 // Update обновляет существующий секрет по его ID.
 func (s *ClientService) Update(ctx context.Context, id int, meta models.MetaData, data models.SecretData) error {
+	secret, err := s.storage.GetSecret(ctx, id)
+	if err != nil {
+		return err
+	}
 	dataBody, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -76,32 +92,35 @@ func (s *ClientService) Update(ctx context.Context, id int, meta models.MetaData
 	if err != nil {
 		return err
 	}
-
-	p := payload{
-		Meta: metaBody,
-		Data: dataBody,
-	}
+	p := payload{Meta: metaBody, Data: dataBody}
 	body, err := json.Marshal(p)
 	if err != nil {
 		return err
 	}
-
 	encryptedBody, err := crypto.Encrypt(s.key, body)
 	if err != nil {
 		return err
 	}
-
 	cipherData := models.CipherData{
-		ID:     id,
-		Type:   data.SecretType(),
-		Cipher: encryptedBody,
+		ID:      id,
+		Type:    data.SecretType(),
+		Cipher:  encryptedBody,
+		Version: secret.Version,
 	}
-	return s.storage.UpdateSecret(ctx, cipherData)
+	err = s.storage.UpdateSecret(ctx, cipherData)
+	if err == nil {
+		s.syncer.RunSync()
+	}
+	return err
 }
 
 // Delete удаляет секрет по его ID.
 func (s *ClientService) Delete(ctx context.Context, id int) error {
-	return s.storage.DeleteSecret(ctx, id)
+	err := s.storage.DeleteSecret(ctx, id)
+	if err == nil {
+		s.syncer.RunSync()
+	}
+	return err
 }
 
 // GetAll возвращает список расшифрованных данных.

@@ -1,18 +1,15 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
-func (h *Handler) SaveSecret() LoginHandlerFunc {
+func (h *Handler) PullHandler() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user AuthUser) {
 		ctx := r.Context()
 		if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
@@ -27,87 +24,26 @@ func (h *Handler) SaveSecret() LoginHandlerFunc {
 			return
 		}
 		defer r.Body.Close()
-		var cipherData models.CipherData
-		err = json.Unmarshal(body, &cipherData)
+		var version models.SecretVersions
+		err = json.Unmarshal(body, &version)
 		if err != nil {
 			h.logger.Errorw("ошибка десериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		cipherData.UserID = user.ID
-		id, err := h.storage.Save(ctx, user.Login, cipherData)
+		cipherData, err := h.storage.GetSecrets(ctx, user.ID, version)
 		if err != nil {
-			h.logger.Errorw("ошибка сохранения/обновления", "error", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		res, err := json.Marshal(models.SecretID{ID: id})
-		if err != nil {
-			h.logger.Errorw("ошибка сериализации", "error", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(res)
-	}
-}
-
-func (h *Handler) GetSecret() LoginHandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request, user AuthUser) {
-		ctx := r.Context()
-		strID := r.URL.Query().Get("id")
-		if strID == "" {
-			h.logger.Errorw("в запросе отсутствует id")
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		id, err := strconv.Atoi(strID)
-		if err != nil {
-			h.logger.Errorw("ошибка парсинга id", "error", err)
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		cipherData, err := h.storage.Get(ctx, user.ID, id)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				h.logger.Errorw("секрет не найден", "id", id, "user_id", user.ID)
-				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-				return
-			}
-			h.logger.Errorw("ошибка хранилища", "error", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		res, err := json.Marshal(cipherData)
-		if err != nil {
-			h.logger.Errorw("ошибка сериализации", "error", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(res)
-	}
-}
-
-func (h *Handler) GetAllSecret() LoginHandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request, user AuthUser) {
-		ctx := r.Context()
-		cipherData, err := h.storage.GetAll(ctx, user.ID)
-		if err != nil {
-			h.logger.Errorw("ошибка хранилища", "error", err)
+			h.logger.Errorw("ошибка получения секретов из хранилища", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 		if len(cipherData) == 0 {
-			h.logger.Errorw("секреты не найдены", "user_id", user.ID)
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		res, err := json.Marshal(cipherData)
 		if err != nil {
-			h.logger.Errorw("ошибка сериализации", "error", err)
+			h.logger.Errorw("ошибка сериализации ответа", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -117,29 +53,31 @@ func (h *Handler) GetAllSecret() LoginHandlerFunc {
 	}
 }
 
-func (h *Handler) DeleteSecret() LoginHandlerFunc {
+func (h *Handler) PushHandler() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user AuthUser) {
 		ctx := r.Context()
-		strID := r.URL.Query().Get("id")
-		if strID == "" {
-			h.logger.Errorw("в запросе отсутствует id")
+		if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+			h.logger.Errorw("не соответствие content-type", "content-type", r.Header.Get("Content-Type"))
+			http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
+			return
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			h.logger.Errorw("ошибка чтения body", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		id, err := strconv.Atoi(strID)
+		defer r.Body.Close()
+		var changelogs models.Changelogs
+		err = json.Unmarshal(body, &changelogs)
 		if err != nil {
-			h.logger.Errorw("ошибка парсинга id", "error", err)
+			h.logger.Errorw("ошибка десериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		err = h.storage.Delete(ctx, user.ID, id)
+		err = h.storage.UpdateSecrets(ctx, user.ID, changelogs)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				h.logger.Errorw("секрет не найден", "id", id, "user_id", user.ID)
-				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-				return
-			}
-			h.logger.Errorw("ошибка хранилища", "error", err)
+			h.logger.Errorw("ошибка применения журнала изменений в хранилище", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}

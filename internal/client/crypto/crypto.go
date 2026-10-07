@@ -18,7 +18,7 @@ const (
 )
 
 // GenerateKey генерирует криптографический ключ из мастер-пароля и логина с помощью Argon2id.
-func GenerateKey(password string, login string) []byte {
+func GenerateKey(login, password string) []byte {
 	hash := sha256.New()
 	hash.Write([]byte(login))
 	salt := hash.Sum(nil)

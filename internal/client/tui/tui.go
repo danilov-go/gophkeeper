@@ -8,6 +8,8 @@ import (
 )
 
 type SecretService interface {
+	Register(ctx context.Context, login, password string) error
+	Login(ctx context.Context, login, password string) error
 	Save(ctx context.Context, meta models.MetaData, data models.SecretData) (int, error)
 	GetAll(ctx context.Context, sType models.SecretType) ([]models.Secret, error)
 	Update(ctx context.Context, id int, meta models.MetaData, data models.SecretData) error
@@ -20,29 +22,33 @@ type SecretService interface {
 type sessionState int
 
 const (
-	menuState = iota
+	authState sessionState = iota
+	authFormState
+	menuState
 	listState
 	formState
 )
 
 type AppModel struct {
-	state   sessionState
-	service SecretService
-	menu    MenuModel
-	list    ListModel
-	form    FormModel
+	state    sessionState
+	service  SecretService
+	authMenu AuthMenuModel
+	authForm AuthFormModel
+	menu     MenuModel
+	list     ListModel
+	form     FormModel
 }
 
 func NewAppModel(storage SecretService) AppModel {
 	return AppModel{
-		state:   menuState,
-		service: storage,
-		menu:    NewMenuModel(),
+		state:    authState,
+		service:  storage,
+		authMenu: NewAuthMenuModel(),
 	}
 }
 
 func (m AppModel) Init() tea.Cmd {
-	return nil
+	return m.authMenu.Init()
 }
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -52,6 +58,30 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	switch m.state {
+	case authState:
+		updatedAuthMenu, authMenuCmd := m.authMenu.Update(msg)
+		m.authMenu = updatedAuthMenu.(AuthMenuModel)
+		if m.authMenu.chosen {
+			m.authMenu.chosen = false
+			m.state = authFormState
+			m.authForm = NewAuthFormModel(m.service, m.authMenu.isRegistration)
+			return m, m.authForm.Init()
+		}
+		return m, authMenuCmd
+	case authFormState:
+		updatedAuthForm, authFormCmd := m.authForm.Update(msg)
+		m.authForm = updatedAuthForm.(AuthFormModel)
+		if m.authForm.success {
+			m.authForm.success = false
+			m.state = menuState
+			m.menu = NewMenuModel()
+			return m, m.menu.Init()
+		}
+		if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.String() == "esc" {
+			m.state = authState
+			return m, nil
+		}
+		return m, authFormCmd
 	case menuState:
 		updatedMenu, menuCmd := m.menu.Update(msg)
 		m.menu = updatedMenu.(MenuModel)
@@ -105,6 +135,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m AppModel) View() string {
 	switch m.state {
+	case authState:
+		return m.authMenu.View()
+	case authFormState:
+		return m.authForm.View()
 	case menuState:
 		return m.menu.View()
 	case listState:

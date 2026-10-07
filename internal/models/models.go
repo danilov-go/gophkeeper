@@ -23,13 +23,15 @@ type SecretID struct {
 	ID int `json:"id"`
 }
 
-// CipherData содержит зашифрованные данных для использования сервером.
+// CipherData содержит зашифрованные данных для передачи.
 type CipherData struct {
 	ID        int        `json:"id,omitempty"`
 	UserID    int        `json:"-"`
 	Type      SecretType `json:"type"`
 	Cipher    []byte     `json:"cipher"`
 	UpdatedAt time.Time  `json:"updated_at"`
+	Version   int        `json:"version"`
+	Deleted   bool       `json:"deleted"`
 }
 
 // LoginPassword определяет пары логин/пароль.

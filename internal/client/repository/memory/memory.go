@@ -11,16 +11,20 @@ import (
 
 // MemStorage реализует хранилище данных в оперативной памяти.
 type MemStorage struct {
-	mu      sync.RWMutex
-	nextID  int
-	secrets map[int]models.CipherData
+	mu        sync.RWMutex
+	nextID    int
+	secrets   map[int]models.CipherData
+	nextLogID int
+	changelog []models.Changelog
 }
 
 // InitMemStorage создает новый экземпляр MemStorage.
 func InitMemStorage() *MemStorage {
 	return &MemStorage{
-		nextID:  1,
-		secrets: make(map[int]models.CipherData),
+		nextID:    1,
+		secrets:   make(map[int]models.CipherData),
+		nextLogID: 1,
+		changelog: make([]models.Changelog, 0),
 	}
 }
 
@@ -37,7 +41,15 @@ func (m *MemStorage) SaveSecret(ctx context.Context, secret models.CipherData) (
 	id := m.nextID
 	m.nextID++
 	secret.ID = id
+	secret.Version = 1
 	m.secrets[id] = secret
+	m.changelog = append(m.changelog, models.Changelog{
+		ID:       m.nextLogID,
+		Action:   models.ActionCreate,
+		SecretID: id,
+		Secret:   secret,
+	})
+	m.nextLogID++
 	return id, nil
 }
 
@@ -92,7 +104,15 @@ func (m *MemStorage) UpdateSecret(ctx context.Context, secret models.CipherData)
 	if _, ok := m.secrets[secret.ID]; !ok {
 		return errors.New("данные отсутствуют в хранилище")
 	}
+	secret.Version++
 	m.secrets[secret.ID] = secret
+	m.changelog = append(m.changelog, models.Changelog{
+		ID:       m.nextLogID,
+		Action:   models.ActionUpdate,
+		SecretID: secret.ID,
+		Secret:   secret,
+	})
+	m.nextLogID++
 	return nil
 }
 
@@ -101,17 +121,87 @@ func (m *MemStorage) DeleteSecret(ctx context.Context, id int) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	if m.secrets == nil {
 		return errors.New("хранилище пустое")
 	}
-	if _, ok := m.secrets[id]; !ok {
+	secret, ok := m.secrets[id]
+	if !ok {
 		return errors.New("данные отсутствуют в хранилище")
 	}
 	delete(m.secrets, id)
+	secret.Version++
+	secret.Deleted = true
+	m.changelog = append(m.changelog, models.Changelog{
+		ID:       m.nextLogID,
+		Action:   models.ActionDelete,
+		SecretID: secret.ID,
+		Secret:   secret,
+	})
+	m.nextLogID++
+	return nil
+}
+
+func (m *MemStorage) GetVersion(ctx context.Context) (map[int]int, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.secrets == nil {
+		return nil, errors.New("хранилище пустое")
+	}
+	versions := make(map[int]int)
+	for id, secret := range m.secrets {
+		versions[id] = secret.Version
+	}
+	return versions, nil
+}
+
+func (m *MemStorage) GetChangelog() ([]models.Changelog, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.changelog == nil {
+		return make([]models.Changelog, 0), nil
+	}
+	changelogCopy := make([]models.Changelog, len(m.changelog))
+	copy(changelogCopy, m.changelog)
+	return changelogCopy, nil
+}
+
+func (m *MemStorage) DeleteChangelog(id int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var rezult []models.Changelog
+	for _, chlog := range m.changelog {
+		if chlog.ID > id {
+			rezult = append(rezult, chlog)
+		}
+	}
+	m.changelog = rezult
+	return nil
+}
+
+func (m *MemStorage) SyncUpdate(ctx context.Context, cipherData []models.CipherData) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.secrets == nil {
+		m.secrets = make(map[int]models.CipherData)
+	}
+	for _, cipher := range cipherData {
+		if cipher.Deleted {
+			delete(m.secrets, cipher.ID)
+			continue
+		}
+		m.secrets[cipher.ID] = cipher
+		if cipher.ID >= m.nextID {
+			m.nextID = cipher.ID + 1
+		}
+	}
 	return nil
 }
 
