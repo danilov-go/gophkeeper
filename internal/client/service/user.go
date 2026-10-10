@@ -14,11 +14,19 @@ func (s *ClientService) Register(ctx context.Context, login, password string) er
 	if login == "" || password == "" {
 		return errors.New("пустой логин или пароль")
 	}
-	err := s.sender.Register(ctx, login, password)
+	salt, err := crypto.GenerateSalt()
 	if err != nil {
 		return err
 	}
-	s.key = crypto.GenerateKey(login, password)
+	err = s.sender.Register(ctx, login, password, salt)
+	if err != nil {
+		return err
+	}
+	key, err := crypto.GenerateKey(salt, password)
+	if err != nil {
+		return err
+	}
+	s.key = key
 	s.syncer.RunSync()
 	return nil
 }
@@ -30,11 +38,15 @@ func (s *ClientService) Login(ctx context.Context, login, password string) error
 	if login == "" || password == "" {
 		return errors.New("пустой логин или пароль")
 	}
-	err := s.sender.Auth(ctx, login, password)
+	salt, err := s.sender.Auth(ctx, login, password)
 	if err != nil {
 		return err
 	}
-	s.key = crypto.GenerateKey(login, password)
+	key, err := crypto.GenerateKey(salt, password)
+	if err != nil {
+		return err
+	}
+	s.key = key
 	s.syncer.RunSync()
 	return nil
 }

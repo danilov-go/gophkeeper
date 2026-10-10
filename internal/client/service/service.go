@@ -20,8 +20,8 @@ type Storage interface {
 }
 
 type Sender interface {
-	Register(ctx context.Context, login, password string) error
-	Auth(ctx context.Context, login, password string) error
+	Register(ctx context.Context, login, password, salt string) error
+	Auth(ctx context.Context, login, password string) (string, error)
 	Sync(ctx context.Context) error
 }
 

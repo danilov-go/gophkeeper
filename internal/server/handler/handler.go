@@ -27,7 +27,7 @@ func NewHandlers(storage Storage, l log) *Handler {
 
 // Storage определяет методы для взаимодействия с хранилищем.
 type Storage interface {
-	SaveUser(ctx context.Context, login, passwordHash string) (int, error)
+	SaveUser(ctx context.Context, login, passwordHash, salt string) (int, error)
 	GetUser(ctx context.Context, login string) (models.User, error)
 	Delete(ctx context.Context, userID, id int) error
 	GetSecrets(ctx context.Context, userID int, version models.SecretVersions) ([]models.CipherData, error)

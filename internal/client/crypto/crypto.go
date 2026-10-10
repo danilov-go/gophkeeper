@@ -4,7 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha256"
+	"encoding/hex"
 	"io"
 
 	"golang.org/x/crypto/argon2"
@@ -15,14 +15,26 @@ const (
 	argonMemory  = 64 * 1024
 	argonThreads = 2
 	argonKeyLen  = 32
+	sizeSalt     = 16
 )
 
+func GenerateSalt() (string, error) {
+	random := make([]byte, sizeSalt)
+	_, err := rand.Read(random)
+	if err != nil {
+		return "", err
+	}
+	salt := hex.EncodeToString(random)
+	return salt, nil
+}
+
 // GenerateKey генерирует криптографический ключ из мастер-пароля и логина с помощью Argon2id.
-func GenerateKey(login, password string) []byte {
-	hash := sha256.New()
-	hash.Write([]byte(login))
-	salt := hash.Sum(nil)
-	return argon2.IDKey([]byte(password), salt, argonTime, argonMemory, uint8(argonThreads), argonKeyLen)
+func GenerateKey(salt string, password string) ([]byte, error) {
+	saltBytes, err := hex.DecodeString(salt)
+	if err != nil {
+		return nil, err
+	}
+	return argon2.IDKey([]byte(password), saltBytes, argonTime, argonMemory, uint8(argonThreads), argonKeyLen), nil
 }
 
 // Encrypt шифрует данные с помощью ключа.

@@ -47,10 +47,11 @@ func NewHTTPSender(cfg config.ConfigClient, l log, s Storage) *HTTPSender {
 }
 
 // Register отправляет запрос на регистрацию нового пользователя.
-func (s *HTTPSender) Register(ctx context.Context, login, password string) error {
-	body := models.LoginPassword{
+func (s *HTTPSender) Register(ctx context.Context, login, password, salt string) error {
+	body := models.RegisterUser{
 		Login:    login,
 		Password: password,
+		Salt:     salt,
 	}
 	resp, err := s.client.R().
 		SetContext(ctx).
@@ -73,29 +74,35 @@ func (s *HTTPSender) Register(ctx context.Context, login, password string) error
 }
 
 // Auth выполняет аутентификацию пользователя на сервере и сохраняет JWT-токен.
-func (s *HTTPSender) Auth(ctx context.Context, login, password string) error {
-	reqBody := models.LoginPassword{
+func (s *HTTPSender) Auth(ctx context.Context, login, password string) (string, error) {
+	body := models.RegisterUser{
 		Login:    login,
 		Password: password,
 	}
+	var req models.AuthUser
 	resp, err := s.client.R().
 		SetContext(ctx).
-		SetBody(reqBody).
+		SetBody(body).
+		SetResult(&req).
 		Post("/user/login")
 	if err != nil {
 		s.logger.Errorw("ошибка при авторизации", "error", err)
-		return err
+		return "", err
 	}
 	if resp.IsError() {
 		s.logger.Errorw("сервер вернул ошибку", "status", resp.Status())
-		return fmt.Errorf("статус ответа от сервера: %s", resp.Status())
+		return "", fmt.Errorf("статус ответа от сервера: %s", resp.Status())
 	}
 	token := resp.Header().Get("Authorization")
 	if token == "" {
-		return errors.New("токен не передан сервером")
+		return "", errors.New("токен не передан сервером")
 	}
 	s.token = strings.TrimPrefix(token, "Bearer ")
-	return nil
+	if err != nil {
+		s.logger.Errorw("ошибка декодирования соли от сервера", "error", err)
+		return "", err
+	}
+	return req.Salt, nil
 }
 
 func (s *HTTPSender) Sync(ctx context.Context) error {

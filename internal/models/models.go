@@ -17,6 +17,17 @@ type User struct {
 	ID           int
 	Login        string
 	PasswordHash string
+	Salt         string
+}
+
+type RegisterUser struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	Salt     string `json:"salt"`
+}
+
+type AuthUser struct {
+	Salt string `json:"salt"`
 }
 
 type SecretID struct {

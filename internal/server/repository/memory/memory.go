@@ -77,7 +77,7 @@ func (m *MemStorage) UpdateSecrets(ctx context.Context, userID int, changelogs m
 }
 
 // SaveUser сохраняет нового пользователя.
-func (m *MemStorage) SaveUser(ctx context.Context, login, passwordHash string) (int, error) {
+func (m *MemStorage) SaveUser(ctx context.Context, login, passwordHash, salt string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
@@ -93,6 +93,7 @@ func (m *MemStorage) SaveUser(ctx context.Context, login, passwordHash string) (
 		ID:           userID,
 		Login:        login,
 		PasswordHash: passwordHash,
+		Salt:         salt,
 	}
 	m.usersID[userID] = newUser
 	m.usersLogin[login] = userID

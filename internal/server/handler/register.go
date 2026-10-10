@@ -96,21 +96,22 @@ func Check(password, encodedHash string) (bool, error) {
 	return false, nil
 }
 
-func decode(w http.ResponseWriter, r *http.Request) (loginPassword, error) {
-	var user loginPassword
+func decode[T any](w http.ResponseWriter, r *http.Request) (T, error) {
+	var body T
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
-	err := json.NewDecoder(r.Body).Decode(&user)
+	defer r.Body.Close()
+	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		return loginPassword{}, err
+		return body, err
 	}
-	return user, nil
+	return body, nil
 }
 
 // RegisterUser возвращает обработчик для регистрации нового пользователя.
 func (h *Handler) RegisterUser(key string) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		user, err := decode(w, r)
+		user, err := decode[models.RegisterUser](w, r)
 		if err != nil {
 			h.logger.Errorw("ошибка десилиризации", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -127,7 +128,7 @@ func (h *Handler) RegisterUser(key string) http.HandlerFunc {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-		id, err := h.storage.SaveUser(ctx, user.Login, hashStringPassword)
+		id, err := h.storage.SaveUser(ctx, user.Login, hashStringPassword, user.Salt)
 		if err != nil {
 			if errors.Is(err, models.ErrUserAlreadyExists) {
 				h.logger.Errorw("пользователь с таким именем уже существует", "error", err)
@@ -153,7 +154,7 @@ func (h *Handler) RegisterUser(key string) http.HandlerFunc {
 func (h *Handler) LoginUser(key string) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		user, err := decode(w, r)
+		user, err := decode[loginPassword](w, r)
 		if err != nil {
 			h.logger.Errorw("ошибка десериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -183,6 +184,15 @@ func (h *Handler) LoginUser(key string) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Authorization", "Bearer "+signedToken)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		resp := models.AuthUser{
+			Salt: store.Salt,
+		}
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			h.logger.Errorw("ошибка сериализации ответа с солью", "error", err)
+			return
+		}
+
 	})
 }
