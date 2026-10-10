@@ -17,12 +17,15 @@ type Storage interface {
 	GetAllSecret(ctx context.Context, sType models.SecretType) ([]models.CipherData, error)
 	UpdateSecret(ctx context.Context, secret models.CipherData) error
 	DeleteSecret(ctx context.Context, id int) error
+	SaveSalt(ctx context.Context, login, salt string) error
+	GetSalt(ctx context.Context, login string) (string, error)
 }
 
 type Sender interface {
 	Register(ctx context.Context, login, password, salt string) error
 	Auth(ctx context.Context, login, password string) (string, error)
 	Sync(ctx context.Context) error
+	Logout()
 }
 
 // ClientService управляет бизнес-логикой.
@@ -204,4 +207,9 @@ func (s *ClientService) ExportFile(path string, data []byte) error {
 		path = "."
 	}
 	return os.WriteFile(path, data, 0600)
+}
+
+func (s *ClientService) Logout() {
+	s.key = nil
+	s.sender.Logout()
 }

@@ -16,6 +16,7 @@ type MemStorage struct {
 	secrets   map[int]models.CipherData
 	nextLogID int
 	changelog []models.Changelog
+	user      map[string]string
 }
 
 // InitMemStorage создает новый экземпляр MemStorage.
@@ -25,6 +26,7 @@ func InitMemStorage() *MemStorage {
 		secrets:   make(map[int]models.CipherData),
 		nextLogID: 1,
 		changelog: make([]models.Changelog, 0),
+		user:      make(map[string]string),
 	}
 }
 
@@ -203,6 +205,32 @@ func (m *MemStorage) SyncUpdate(ctx context.Context, cipherData []models.CipherD
 		}
 	}
 	return nil
+}
+
+func (m *MemStorage) SaveSalt(ctx context.Context, login, salt string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.user[login] = salt
+	return nil
+}
+
+func (m *MemStorage) GetSalt(ctx context.Context, login string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.user == nil {
+		return "", errors.New("хранилище пустое")
+	}
+	salt, ok := m.user[login]
+	if !ok {
+		return "", errors.New("соль отсутствует в хранилище")
+	}
+	return salt, nil
 }
 
 // Ping проверяет доступность хранилища.

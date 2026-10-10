@@ -17,6 +17,7 @@ type SecretService interface {
 	Get(ctx context.Context, id int) (models.Secret, error)
 	GetFile(path string) ([]byte, error)
 	ExportFile(path string, data []byte) error
+	Logout()
 }
 
 type sessionState int
@@ -83,6 +84,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, authFormCmd
 	case menuState:
+		if keyMsg, ok := msg.(tea.KeyMsg); ok {
+			if keyMsg.String() == "q" {
+				m.service.Logout()
+				m.state = authState
+				m.authMenu = NewAuthMenuModel()
+				return m, m.authMenu.Init()
+			}
+		}
 		updatedMenu, menuCmd := m.menu.Update(msg)
 		m.menu = updatedMenu.(MenuModel)
 		if m.menu.chosen {

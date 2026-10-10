@@ -47,6 +47,7 @@ func (m AuthFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "down", "enter":
 			if m.focus == len(m.inputs)-1 {
+				m.err = nil
 				return m, m.submitCmd()
 			}
 			m.focus++
@@ -63,6 +64,7 @@ func (m AuthFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case error:
 		m.err = msg
+		return m, nil
 	}
 
 	cmd := m.updateInputs(msg)

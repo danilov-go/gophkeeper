@@ -18,8 +18,10 @@ func (s *ClientService) Register(ctx context.Context, login, password string) er
 	if err != nil {
 		return err
 	}
-	err = s.sender.Register(ctx, login, password, salt)
-	if err != nil {
+	if err = s.sender.Register(ctx, login, password, salt); err != nil {
+		return err
+	}
+	if err = s.storage.SaveSalt(ctx, login, salt); err != nil {
 		return err
 	}
 	key, err := crypto.GenerateKey(salt, password)
@@ -40,7 +42,10 @@ func (s *ClientService) Login(ctx context.Context, login, password string) error
 	}
 	salt, err := s.sender.Auth(ctx, login, password)
 	if err != nil {
-		return err
+		salt, err = s.storage.GetSalt(ctx, login)
+		if err != nil {
+			return err
+		}
 	}
 	key, err := crypto.GenerateKey(salt, password)
 	if err != nil {

@@ -179,3 +179,7 @@ func (s *HTTPSender) push(ctx context.Context) error {
 	s.storage.DeleteChangelog(id)
 	return nil
 }
+
+func (s *HTTPSender) Logout() {
+	s.token = ""
+}
