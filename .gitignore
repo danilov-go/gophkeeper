@@ -15,6 +15,7 @@ gophkeeper-server
 gophkeeper-client
 *.out
 *.prof
+*.log
 coverage.out
 .env
 *.env
