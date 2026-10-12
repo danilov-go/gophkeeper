@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/danilov-go/gophkeeper/internal/models"
+	"github.com/danilov-go/gophkeeper/internal/server/sync"
 )
 
 type log interface {
@@ -15,13 +16,15 @@ type log interface {
 type Handler struct {
 	storage Storage
 	logger  log
+	event   sync.Publisher
 }
 
 // NewHandlers создает новый экземпляр Handler.
-func NewHandlers(storage Storage, l log) *Handler {
+func NewHandlers(storage Storage, l log, event sync.Publisher) *Handler {
 	return &Handler{
 		storage: storage,
 		logger:  l,
+		event:   event,
 	}
 }
 

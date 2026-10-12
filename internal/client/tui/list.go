@@ -10,6 +10,8 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+type SyncOccurrenceMsg struct{}
+
 type MsgList struct {
 	Text string
 }
@@ -43,6 +45,9 @@ func (m ListModel) Init() tea.Cmd {
 
 func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case SyncOccurrenceMsg:
+		m.statusMsg = "Данные обновлены"
+		return m, m.Init()
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "up":

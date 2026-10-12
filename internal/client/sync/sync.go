@@ -14,20 +14,22 @@ type Logger interface {
 }
 
 type SyncWorker struct {
-	syncer   Syncer
-	logger   Logger
-	interval time.Duration
-	step     time.Duration
-	syncCh   chan struct{}
+	syncer     Syncer
+	logger     Logger
+	interval   time.Duration
+	step       time.Duration
+	syncCh     chan struct{}
+	occurrence chan struct{}
 }
 
 func NewSyncWorker(syncer Syncer, l Logger, interval time.Duration, step time.Duration) *SyncWorker {
 	return &SyncWorker{
-		syncer:   syncer,
-		logger:   l,
-		interval: interval,
-		step:     step,
-		syncCh:   make(chan struct{}, 1),
+		syncer:     syncer,
+		logger:     l,
+		interval:   interval,
+		step:       step,
+		syncCh:     make(chan struct{}, 1),
+		occurrence: make(chan struct{}, 1),
 	}
 }
 
@@ -62,6 +64,10 @@ func (w *SyncWorker) send(ctx context.Context) {
 		}
 		err := w.syncer.Sync(ctx)
 		if err == nil {
+			select {
+			case w.occurrence <- struct{}{}:
+			default:
+			}
 			return
 		}
 		count++
@@ -76,4 +82,8 @@ func (w *SyncWorker) send(ctx context.Context) {
 		case <-time.After(duration):
 		}
 	}
+}
+
+func (w *SyncWorker) Occurrence() <-chan struct{} {
+	return w.occurrence
 }

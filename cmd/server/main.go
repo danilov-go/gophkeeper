@@ -10,6 +10,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/server/handler"
 	server "github.com/danilov-go/gophkeeper/internal/server/http"
 	"github.com/danilov-go/gophkeeper/internal/server/repository/memory"
+	"github.com/danilov-go/gophkeeper/internal/server/sync"
 	"github.com/go-chi/chi"
 	"golang.org/x/sync/errgroup"
 )
@@ -23,7 +24,8 @@ func main() {
 		logger.Log.Sugar().Fatal("ошибка загрузки конфигурации сервера")
 	}
 	storage := memory.InitMemStorage()
-	h := handler.NewHandlers(storage, logger.Log.Sugar())
+	event := sync.NewSyncNotifier()
+	h := handler.NewHandlers(storage, logger.Log.Sugar(), event)
 	r := chi.NewRouter()
 	jwt := "jwtsecrettoken"
 	r.Route("/user", func(r chi.Router) {
@@ -33,6 +35,7 @@ func main() {
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/pull", handler.AuthMiddleware(jwt, h.PullHandler()))
 		r.Post("/push", handler.AuthMiddleware(jwt, h.PushHandler()))
+		r.Get("/event", handler.AuthMiddleware(jwt, h.EventHandler()))
 	})
 	serv := server.New(cfg.Net.String(), logger.Log.Sugar(), r)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)

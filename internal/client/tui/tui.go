@@ -58,6 +58,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	}
+	if _, ok := msg.(SyncOccurrenceMsg); ok {
+		if m.state == listState {
+			updatedList, listCmd := m.list.Update(msg)
+			m.list = updatedList.(ListModel)
+			return m, listCmd
+		}
+		return m, nil
+	}
 	switch m.state {
 	case authState:
 		updatedAuthMenu, authMenuCmd := m.authMenu.Update(msg)

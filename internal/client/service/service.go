@@ -26,6 +26,7 @@ type Sender interface {
 	Auth(ctx context.Context, login, password string) (string, error)
 	Sync(ctx context.Context) error
 	Logout()
+	SyncEvent(ctx context.Context, runSync func())
 }
 
 // ClientService управляет бизнес-логикой.
@@ -212,4 +213,9 @@ func (s *ClientService) ExportFile(path string, data []byte) error {
 func (s *ClientService) Logout() {
 	s.key = nil
 	s.sender.Logout()
+}
+
+func (s *ClientService) RunSyncEvent(ctx context.Context) {
+	s.sender.SyncEvent(ctx, s.syncer.RunSync)
+
 }

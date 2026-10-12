@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/danilov-go/gophkeeper/internal/models"
+	"github.com/danilov-go/gophkeeper/internal/server/sync"
 )
 
 func (h *Handler) PullHandler() LoginHandlerFunc {
@@ -81,6 +82,10 @@ func (h *Handler) PushHandler() LoginHandlerFunc {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
+		h.event.Notify(sync.SyncEvent{
+			UserID:  user.ID,
+			Message: "sync",
+		})
 		w.WriteHeader(http.StatusOK)
 	}
 }

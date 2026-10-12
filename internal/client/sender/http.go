@@ -1,6 +1,7 @@
 package sender
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -98,10 +99,6 @@ func (s *HTTPSender) Auth(ctx context.Context, login, password string) (string, 
 		return "", errors.New("токен не передан сервером")
 	}
 	s.token = strings.TrimPrefix(token, "Bearer ")
-	if err != nil {
-		s.logger.Errorw("ошибка декодирования соли от сервера", "error", err)
-		return "", err
-	}
 	return req.Salt, nil
 }
 
@@ -182,4 +179,39 @@ func (s *HTTPSender) push(ctx context.Context) error {
 
 func (s *HTTPSender) Logout() {
 	s.token = ""
+}
+
+func (s *HTTPSender) SyncEvent(ctx context.Context, runSync func()) {
+	token := s.token
+	if token == "" {
+		return
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", s.client.BaseURL+"/api/event", nil)
+	if err != nil {
+		return
+	}
+	uniqueDeviceID := fmt.Sprintf("cli_terminal_time_%d", time.Now().UnixNano())
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("device-id", uniqueDeviceID)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		s.logger.Errorw("не удалось подключиться к системе оповещений сервера", "error", err)
+		return
+	}
+	defer resp.Body.Close()
+	reader := bufio.NewReader(resp.Body)
+	for {
+		if err := ctx.Err(); err != nil {
+			return
+		}
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
+		if strings.HasPrefix(line, "data: sync") {
+			runSync()
+		}
+	}
 }

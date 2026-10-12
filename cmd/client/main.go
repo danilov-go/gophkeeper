@@ -26,8 +26,8 @@ func main() {
 	}
 	storage := memory.InitMemStorage()
 	send := sender.NewSender(*cfg, logger.Log.Sugar(), storage)
-	sendInterval := 5 * time.Second
-	stepSend := 2 * time.Second
+	sendInterval := 5 * time.Minute
+	stepSend := 2 * time.Minute
 	syncer := sync.NewSyncWorker(send, logger.Log.Sugar(), sendInterval, stepSend)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer stop()
@@ -35,6 +35,16 @@ func main() {
 	svc := service.NewClientService(storage, send, syncer)
 	appModel := tui.NewAppModel(svc)
 	p := tea.NewProgram(appModel)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-syncer.Occurrence():
+				p.Send(tui.SyncOccurrenceMsg{})
+			}
+		}
+	}()
 	if _, err := p.Run(); err != nil {
 		logger.Log.Sugar().Fatalw("ошибка интерфейса", "error", err)
 	}

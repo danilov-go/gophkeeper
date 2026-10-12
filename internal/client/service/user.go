@@ -30,6 +30,7 @@ func (s *ClientService) Register(ctx context.Context, login, password string) er
 	}
 	s.key = key
 	s.syncer.RunSync()
+	go s.RunSyncEvent(ctx)
 	return nil
 }
 
@@ -53,5 +54,6 @@ func (s *ClientService) Login(ctx context.Context, login, password string) error
 	}
 	s.key = key
 	s.syncer.RunSync()
+	go s.RunSyncEvent(ctx)
 	return nil
 }

@@ -16,6 +16,7 @@ type Sender interface {
 	Auth(ctx context.Context, login, password string) (string, error)
 	Sync(ctx context.Context) error
 	Logout()
+	SyncEvent(ctx context.Context, runSync func())
 }
 
 type Storage interface {
