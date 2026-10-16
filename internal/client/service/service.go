@@ -2,11 +2,10 @@ package service
 
 import (
 	"context"
-	"encoding/json"
-	"os"
+	"sync"
 
-	"github.com/danilov-go/gophkeeper/internal/client/crypto"
-	"github.com/danilov-go/gophkeeper/internal/client/sync"
+	"github.com/awnumar/memguard"
+
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
@@ -17,205 +16,37 @@ type Storage interface {
 	GetAllSecret(ctx context.Context, sType models.SecretType) ([]models.CipherData, error)
 	UpdateSecret(ctx context.Context, secret models.CipherData) error
 	DeleteSecret(ctx context.Context, id int) error
-	SaveSalt(ctx context.Context, login, salt string) error
-	GetSalt(ctx context.Context, login string) (string, error)
+	SaveUser(ctx context.Context, login, hash, salt string) error
+	GetUser(ctx context.Context, login string) (models.LocalUser, error)
+	SyncUpdate(ctx context.Context, cipherData []models.CipherData) error
+	GetVersion(ctx context.Context) (map[int]int, error)
+	GetChangelog() ([]models.Changelog, error)
+	DeleteChangelog(id int) error
 }
 
 type Sender interface {
-	Register(ctx context.Context, login, password, salt string) error
-	Auth(ctx context.Context, login, password string) (string, error)
-	Sync(ctx context.Context) error
+	Register(ctx context.Context, login, hash, salt string) error
+	Auth(ctx context.Context, login, hash string) error
+	Sync(ctx context.Context, versions map[int]int, changelogs []models.Changelog) ([]models.CipherData, error)
 	Logout()
-	SyncEvent(ctx context.Context, runSync func())
+	ServerEvent(ctx context.Context, runSync func())
+	GetSalt(ctx context.Context, login string) (string, error)
 }
 
 // ClientService управляет бизнес-логикой.
 type ClientService struct {
+	mu      sync.RWMutex
 	storage Storage
 	sender  Sender
-	syncer  *sync.SyncWorker
-	key     []byte
+	key     *memguard.LockedBuffer
+	syncCh  chan<- struct{}
 }
 
 // NewClientService создает экземпляр ClientService.
-func NewClientService(storage Storage, sender Sender, syncer *sync.SyncWorker) *ClientService {
+func NewClientService(storage Storage, sender Sender, syncCh chan<- struct{}) *ClientService {
 	return &ClientService{
 		storage: storage,
 		sender:  sender,
-		syncer:  syncer,
+		syncCh:  syncCh,
 	}
-}
-
-type payload struct {
-	Meta json.RawMessage `json:"meta"`
-	Data json.RawMessage `json:"data"`
-}
-
-// Save сохраняет секрет.
-func (s *ClientService) Save(ctx context.Context, meta models.MetaData, data models.SecretData) (int, error) {
-	dataBody, err := json.Marshal(data)
-	if err != nil {
-		return 0, err
-	}
-	metaBody, err := json.Marshal(meta)
-	if err != nil {
-		return 0, err
-	}
-	p := payload{
-		Meta: metaBody,
-		Data: dataBody,
-	}
-	body, err := json.Marshal(p)
-	if err != nil {
-		return 0, err
-	}
-	encryptedBody, err := crypto.Encrypt(s.key, body)
-	if err != nil {
-		return 0, err
-	}
-	cipherData := models.CipherData{
-		Type:   data.SecretType(),
-		Cipher: encryptedBody,
-	}
-	id, err := s.storage.SaveSecret(ctx, cipherData)
-	s.syncer.RunSync()
-	return id, err
-}
-
-// Update обновляет существующий секрет по его ID.
-func (s *ClientService) Update(ctx context.Context, id int, meta models.MetaData, data models.SecretData) error {
-	secret, err := s.storage.GetSecret(ctx, id)
-	if err != nil {
-		return err
-	}
-	dataBody, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	metaBody, err := json.Marshal(meta)
-	if err != nil {
-		return err
-	}
-	p := payload{Meta: metaBody, Data: dataBody}
-	body, err := json.Marshal(p)
-	if err != nil {
-		return err
-	}
-	encryptedBody, err := crypto.Encrypt(s.key, body)
-	if err != nil {
-		return err
-	}
-	cipherData := models.CipherData{
-		ID:      id,
-		Type:    data.SecretType(),
-		Cipher:  encryptedBody,
-		Version: secret.Version,
-	}
-	err = s.storage.UpdateSecret(ctx, cipherData)
-	if err == nil {
-		s.syncer.RunSync()
-	}
-	return err
-}
-
-// Delete удаляет секрет по его ID.
-func (s *ClientService) Delete(ctx context.Context, id int) error {
-	err := s.storage.DeleteSecret(ctx, id)
-	if err == nil {
-		s.syncer.RunSync()
-	}
-	return err
-}
-
-// GetAll возвращает список расшифрованных данных.
-func (s *ClientService) GetAll(ctx context.Context, sType models.SecretType) ([]models.Secret, error) {
-	cipherData, err := s.storage.GetAllSecret(ctx, sType)
-	if err != nil {
-		return nil, err
-	}
-	data := make([]models.Secret, 0, len(cipherData))
-	for _, cs := range cipherData {
-		decryptedData, err := crypto.Decrypt(s.key, cs.Cipher)
-		if err != nil {
-			return nil, err
-		}
-		var p payload
-		if err := json.Unmarshal(decryptedData, &p); err != nil {
-			return nil, err
-		}
-		d, err := models.NewSecretData(cs.Type, p.Data)
-		if err != nil {
-			return nil, err
-		}
-		m, err := models.NewMetaData(cs.Type, p.Meta)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, models.Secret{
-			ID:   cs.ID,
-			Type: cs.Type,
-			Data: d,
-			Meta: m,
-		})
-	}
-	return data, nil
-}
-
-func (s *ClientService) Get(ctx context.Context, id int) (models.Secret, error) {
-	var data models.Secret
-	cipherData, err := s.storage.GetSecret(ctx, id)
-	if err != nil {
-		return data, err
-	}
-	decryptedData, err := crypto.Decrypt(s.key, cipherData.Cipher)
-	if err != nil {
-		return data, err
-	}
-	var p payload
-	if err := json.Unmarshal(decryptedData, &p); err != nil {
-		return data, err
-	}
-	m, err := models.NewMetaData(cipherData.Type, p.Meta)
-	if err != nil {
-		return data, err
-	}
-	d, err := models.NewSecretData(cipherData.Type, p.Data)
-	if err != nil {
-		return data, err
-	}
-	data = models.Secret{
-		ID:   cipherData.ID,
-		Type: cipherData.Type,
-		Data: d,
-		Meta: m,
-	}
-	return data, nil
-}
-
-func (s *ClientService) GetFile(path string) ([]byte, error) {
-	if path == "" {
-		path = "."
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-func (s *ClientService) ExportFile(path string, data []byte) error {
-	if path == "" {
-		path = "."
-	}
-	return os.WriteFile(path, data, 0600)
-}
-
-func (s *ClientService) Logout() {
-	s.key = nil
-	s.sender.Logout()
-}
-
-func (s *ClientService) RunSyncEvent(ctx context.Context) {
-	s.sender.SyncEvent(ctx, s.syncer.RunSync)
-
 }

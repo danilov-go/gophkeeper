@@ -31,7 +31,6 @@ func (m *MemStorage) GetSecrets(ctx context.Context, userID int, v models.Secret
 	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
 	secrets, ok := m.secrets[userID]
 	if !ok || len(secrets) == 0 {
 		return nil, nil
@@ -52,7 +51,6 @@ func (m *MemStorage) UpdateSecrets(ctx context.Context, userID int, changelogs m
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	if m.secrets == nil {
 		m.secrets = make(map[int]map[int]models.CipherData)
 	}
@@ -77,23 +75,22 @@ func (m *MemStorage) UpdateSecrets(ctx context.Context, userID int, changelogs m
 }
 
 // SaveUser сохраняет нового пользователя.
-func (m *MemStorage) SaveUser(ctx context.Context, login, passwordHash, salt string) (int, error) {
+func (m *MemStorage) SaveUser(ctx context.Context, login, hash, salt string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	if _, ok := m.usersLogin[login]; ok {
 		return 0, models.ErrUserAlreadyExists
 	}
 	userID := m.nextID
 	m.nextID++
 	newUser := models.User{
-		ID:           userID,
-		Login:        login,
-		PasswordHash: passwordHash,
-		Salt:         salt,
+		ID:    userID,
+		Login: login,
+		Hash:  hash,
+		Salt:  salt,
 	}
 	m.usersID[userID] = newUser
 	m.usersLogin[login] = userID

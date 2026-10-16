@@ -24,3 +24,5 @@ local.env
 .vscode/
 *.suo
 *.workspace
+internal/proto/*.pb.go
+internal/proto/*_grpc.pb.go

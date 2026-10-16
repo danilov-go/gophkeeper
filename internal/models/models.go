@@ -1,34 +1,8 @@
 package models
 
 import (
-	"errors"
 	"time"
 )
-
-var (
-	// ErrUserAlreadyExists определяет ошибку, когда логин занят.
-	ErrUserAlreadyExists = errors.New("логин занят")
-	// ErrUserNotFound определяет ошибку, когда пользователь не найден.
-	ErrUserNotFound = errors.New("пользователь не найден")
-)
-
-// User содержит данные о пользователе.
-type User struct {
-	ID           int
-	Login        string
-	PasswordHash string
-	Salt         string
-}
-
-type RegisterUser struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
-	Salt     string `json:"salt"`
-}
-
-type AuthUser struct {
-	Salt string `json:"salt"`
-}
 
 type SecretID struct {
 	ID int `json:"id"`

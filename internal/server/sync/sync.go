@@ -2,23 +2,21 @@ package sync
 
 import (
 	"sync"
+
+	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
-type SyncEvent struct {
-	UserID  int
-	Message string
+type Observer interface {
+	GetUserID() int
+	GetDeviceID() string
+	Update(event models.SyncEvent)
+	Stream() <-chan models.SyncEvent
 }
 
 type Publisher interface {
 	Register(o Observer)
 	Deregister(o Observer)
-	Notify(event SyncEvent)
-}
-
-type Observer interface {
-	Update(event SyncEvent)
-	GetUserID() int
-	GetDeviceID() string
+	Notify(event models.SyncEvent)
 }
 
 type SyncNotifier struct {
@@ -29,54 +27,63 @@ func NewSyncNotifier() *SyncNotifier {
 	return &SyncNotifier{}
 }
 
-func (n *SyncNotifier) Register(o Observer) {
-	n.observers.Store(o.GetDeviceID(), o)
+func (n *SyncNotifier) Register(userID int, deviceID string) (<-chan models.SyncEvent, func()) {
+	stream := NewHTTPStream(deviceID, userID)
+	n.observers.Store(deviceID, stream)
+	unsubscribe := func() {
+		n.observers.Delete(deviceID)
+		stream.Close()
+	}
+	return stream.Stream(), unsubscribe
 }
 
 func (n *SyncNotifier) Deregister(o Observer) {
 	n.observers.Delete(o.GetDeviceID())
 }
 
-func (n *SyncNotifier) Notify(event SyncEvent) {
+func (n *SyncNotifier) Notify(event models.SyncEvent) {
 	n.observers.Range(func(key, val any) bool {
 		if obs, ok := val.(Observer); ok {
-			if obs.GetUserID() == event.UserID {
+			if obs.GetUserID() == event.UserID && obs.GetDeviceID() != event.DeviceID {
 				obs.Update(event)
 			}
 		}
 		return true
 	})
 }
-
-type ClientStream struct {
-	deviceID string
-	userID   int
-	ch       chan SyncEvent
+func (c *HTTPStream) Close() {
+	close(c.ch)
 }
 
-func NewClientStream(deviceID string, userID int) *ClientStream {
-	return &ClientStream{
+type HTTPStream struct {
+	deviceID string
+	userID   int
+	ch       chan models.SyncEvent
+}
+
+func NewHTTPStream(deviceID string, userID int) *HTTPStream {
+	return &HTTPStream{
 		deviceID: deviceID,
 		userID:   userID,
-		ch:       make(chan SyncEvent, 10),
+		ch:       make(chan models.SyncEvent, 1),
 	}
 }
 
-func (c *ClientStream) GetDeviceID() string {
+func (c *HTTPStream) GetDeviceID() string {
 	return c.deviceID
 }
 
-func (c *ClientStream) GetUserID() int {
+func (c *HTTPStream) GetUserID() int {
 	return c.userID
 }
 
-func (c *ClientStream) Update(event SyncEvent) {
+func (c *HTTPStream) Update(event models.SyncEvent) {
 	select {
 	case c.ch <- event:
 	default:
 	}
 }
 
-func (c *ClientStream) Stream() <-chan SyncEvent {
+func (c *HTTPStream) Stream() <-chan models.SyncEvent {
 	return c.ch
 }

@@ -7,6 +7,8 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+type SyncOccurrenceMsg struct{}
+
 type SecretService interface {
 	Register(ctx context.Context, login, password string) error
 	Login(ctx context.Context, login, password string) error
@@ -31,25 +33,46 @@ const (
 )
 
 type AppModel struct {
-	state    sessionState
-	service  SecretService
-	authMenu AuthMenuModel
-	authForm AuthFormModel
-	menu     MenuModel
-	list     ListModel
-	form     FormModel
+	state          sessionState
+	service        SecretService
+	syncChan       chan<- struct{}
+	occurrenceChan <-chan struct{}
+	authMenu       AuthMenuModel
+	authForm       AuthFormModel
+	menu           MenuModel
+	list           ListModel
+	form           FormModel
 }
 
-func NewAppModel(storage SecretService) AppModel {
+func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrenceChan <-chan struct{}) AppModel {
 	return AppModel{
-		state:    authState,
-		service:  storage,
-		authMenu: NewAuthMenuModel(),
+		state:          authState,
+		service:        storage,
+		syncChan:       syncChan,
+		occurrenceChan: occurrenceChan,
+		authMenu:       NewAuthMenuModel(),
+		list:           NewListModel(storage, models.SecretType("")),
+	}
+}
+
+func Sync(ch <-chan struct{}) tea.Cmd {
+	return func() tea.Msg {
+		if ch == nil {
+			return nil
+		}
+		_, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return SyncOccurrenceMsg{}
 	}
 }
 
 func (m AppModel) Init() tea.Cmd {
-	return m.authMenu.Init()
+	return tea.Batch(
+		m.authMenu.Init(),
+		Sync(m.occurrenceChan),
+	)
 }
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -58,13 +81,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	}
-	if _, ok := msg.(SyncOccurrenceMsg); ok {
-		if m.state == listState {
-			updatedList, listCmd := m.list.Update(msg)
+	switch msg.(type) {
+	case SyncOccurrenceMsg:
+		if m.state == listState && m.list.sType != "" {
+			updatedList, listCmd := m.list.Update(SyncOccurrenceMsg{})
 			m.list = updatedList.(ListModel)
-			return m, listCmd
+			return m, tea.Batch(listCmd, Sync(m.occurrenceChan))
 		}
-		return m, nil
+		return m, Sync(m.occurrenceChan)
 	}
 	switch m.state {
 	case authState:
@@ -84,6 +108,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.authForm.success = false
 			m.state = menuState
 			m.menu = NewMenuModel()
+			if m.syncChan != nil {
+				select {
+				case m.syncChan <- struct{}{}:
+				default:
+				}
+			}
 			return m, m.menu.Init()
 		}
 		if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.String() == "esc" {
@@ -105,7 +135,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.menu.chosen {
 			m.menu.chosen = false
 			m.state = listState
-			m.list = NewListModel(m.service, m.menu.options[m.menu.cursor].sType)
+			selectedType := m.menu.options[m.menu.cursor].sType
+			m.list = NewListModel(m.service, selectedType)
+			if cachedData, err := m.service.GetAll(context.Background(), selectedType); err == nil {
+				m.list.secrets = cachedData
+			}
 			return m, m.list.Init()
 		}
 		return m, menuCmd

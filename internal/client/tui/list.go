@@ -10,8 +10,6 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
-type SyncOccurrenceMsg struct{}
-
 type MsgList struct {
 	Text string
 }

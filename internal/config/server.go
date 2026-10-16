@@ -12,6 +12,7 @@ import (
 type ConfigServer struct {
 	Net        NetAddress `mapstructure:"address"`
 	ConfigPath string     `mapstructure:"config_path"`
+	Protocol   string     `mapstructure:"protocol"`
 }
 
 // Get парсит конфигурацию клиента.
@@ -22,12 +23,19 @@ func (c *ConfigServer) Get() error {
 	if pflag.CommandLine.Lookup("configPath") == nil {
 		pflag.CommandLine.StringP("configPath", "c", "", "Path to server JSON config file")
 	}
+	if pflag.CommandLine.Lookup("protocol") == nil {
+		pflag.CommandLine.StringP("protocol", "p", "", "Transport protocol to use")
+	}
 	pflag.Parse()
 	v := viper.New()
 	v.SetDefault("address", "localhost:8080")
+	v.SetDefault("protocol", "http")
 	v.SetEnvPrefix("server")
 	v.AutomaticEnv()
 	if err := v.BindPFlag("address", pflag.CommandLine.Lookup("address")); err != nil {
+		return err
+	}
+	if err := v.BindPFlag("protocol", pflag.CommandLine.Lookup("protocol")); err != nil {
 		return err
 	}
 	if err := v.BindPFlag("config_path", pflag.CommandLine.Lookup("configPath")); err != nil {

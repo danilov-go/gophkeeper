@@ -1,9 +1,10 @@
-// Package server реализует HTTP-сервер приложения.
-package server
+// Package transport реализует HTTP-сервер приложения.
+package transport
 
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"time"
 )
@@ -19,10 +20,13 @@ type Server struct {
 }
 
 // New создает новый экземпляр Server.
-func New(port string, l log, r http.Handler) *Server {
+func New(port string, l log, r http.Handler, ctx context.Context) *Server {
 	server := &http.Server{
 		Addr:    port,
 		Handler: r,
+		BaseContext: func(l net.Listener) context.Context {
+			return ctx
+		},
 	}
 	return &Server{
 		Server: server,

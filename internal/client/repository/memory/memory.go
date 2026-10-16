@@ -16,7 +16,7 @@ type MemStorage struct {
 	secrets   map[int]models.CipherData
 	nextLogID int
 	changelog []models.Changelog
-	user      map[string]string
+	user      map[string]models.LocalUser
 }
 
 // InitMemStorage создает новый экземпляр MemStorage.
@@ -26,7 +26,7 @@ func InitMemStorage() *MemStorage {
 		secrets:   make(map[int]models.CipherData),
 		nextLogID: 1,
 		changelog: make([]models.Changelog, 0),
-		user:      make(map[string]string),
+		user:      make(map[string]models.LocalUser),
 	}
 }
 
@@ -175,13 +175,17 @@ func (m *MemStorage) GetChangelog() ([]models.Changelog, error) {
 func (m *MemStorage) DeleteChangelog(id int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	var rezult []models.Changelog
-	for _, chlog := range m.changelog {
-		if chlog.ID > id {
-			rezult = append(rezult, chlog)
+	i := 0
+	for _, log := range m.changelog {
+		if log.ID > id {
+			m.changelog[i] = log
+			i++
 		}
 	}
-	m.changelog = rezult
+	for j := i; j < len(m.changelog); j++ {
+		m.changelog[j] = models.Changelog{}
+	}
+	m.changelog = m.changelog[:i]
 	return nil
 }
 
@@ -207,28 +211,33 @@ func (m *MemStorage) SyncUpdate(ctx context.Context, cipherData []models.CipherD
 	return nil
 }
 
-func (m *MemStorage) SaveSalt(ctx context.Context, login, salt string) error {
+func (m *MemStorage) SaveUser(ctx context.Context, login, hash, salt string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.user[login] = salt
+	user := models.LocalUser{
+		Hash: hash,
+		Salt: salt,
+	}
+	m.user[login] = user
 	return nil
 }
 
-func (m *MemStorage) GetSalt(ctx context.Context, login string) (string, error) {
+func (m *MemStorage) GetUser(ctx context.Context, login string) (models.LocalUser, error) {
+	var user models.LocalUser
 	if err := ctx.Err(); err != nil {
-		return "", err
+		return user, err
 	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.user == nil {
-		return "", errors.New("хранилище пустое")
+		return user, errors.New("хранилище пустое")
 	}
 	salt, ok := m.user[login]
 	if !ok {
-		return "", errors.New("соль отсутствует в хранилище")
+		return user, errors.New("пользователь отсутствует локально")
 	}
 	return salt, nil
 }

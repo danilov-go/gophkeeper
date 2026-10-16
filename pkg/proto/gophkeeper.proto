@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/danilov-go/gophkeeper/internal/proto";
+
+message CipherData {
+  int32 id = 1;
+  string type = 2;      
+  bytes cipher = 3;     
+  int64 updated_at = 4; 
+  int32 version = 5;
+  bool deleted = 6;
+}
+
+message Changelog {
+  int32 id = 1;
+  string action = 2;     
+  int32 secret_id = 3;
+  CipherData secret = 4; 
+}
+
+message SaltRequest {
+  string login = 1;
+}
+
+message SaltResponse {
+  string salt = 2;
+}
+
+message RegisterRequest {
+  string login = 1;
+  string hash = 2;
+  string salt = 3;
+}
+
+message LoginRequest {
+  string login = 1;
+  string hash = 2;
+}
+
+message AuthResponse {
+  string token = 1;
+  string salt = 2;
+}
+
+message PullRequest {
+  map<int32, int32> versions = 1;
+}
+
+message PullResponse {
+  repeated CipherData secrets = 1;
+}
+
+message PushRequest {
+  string device_id = 1;
+  repeated Changelog changelogs = 2;
+}
+
+message PushResponse {
+  string status = 1;
+}
+
+message StreamRequest {
+  string device_id = 1;
+}
+
+message StreamResponse {
+  string message = 1;
+}
+
+service SyncService {
+  rpc GetSalt (SaltRequest) returns (SaltResponse);
+  rpc RegisterUser (RegisterRequest) returns (AuthResponse);
+  rpc LoginUser (LoginRequest) returns (AuthResponse);
+  rpc Pull (PullRequest) returns (PullResponse);
+  rpc Push (PushRequest) returns (PushResponse);
+  rpc Stream (StreamRequest) returns (stream StreamResponse);
+}

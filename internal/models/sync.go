@@ -17,3 +17,9 @@ type Changelog struct {
 
 type SecretVersions map[int]int
 type Changelogs []Changelog
+
+type SyncEvent struct {
+	UserID   int
+	DeviceID string
+	Message  string
+}
