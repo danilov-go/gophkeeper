@@ -10,7 +10,9 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/logger"
 	"github.com/danilov-go/gophkeeper/internal/proto"
 	"github.com/danilov-go/gophkeeper/internal/server/handler"
-	"github.com/danilov-go/gophkeeper/internal/server/repository/memory"
+	"github.com/danilov-go/gophkeeper/internal/server/repository/db"
+
+	//"github.com/danilov-go/gophkeeper/internal/server/repository/memory"
 	"github.com/danilov-go/gophkeeper/internal/server/service"
 	"github.com/danilov-go/gophkeeper/internal/server/sync"
 	"github.com/danilov-go/gophkeeper/internal/server/transport"
@@ -27,10 +29,14 @@ func main() {
 	if err := cfg.Get(); err != nil {
 		logger.Log.Sugar().Fatal("ошибка загрузки конфигурации сервера")
 	}
-	storage := memory.InitMemStorage()
+	//storage := memory.InitMemStorage()
+	db, err := db.InitDB(cfg.DatabaseDSN)
+	if err != nil {
+		logger.Log.Sugar().Fatalw("ошибка инициализации базы данных", "error", err)
+	}
 	notifier := sync.NewSyncNotifier()
 	jwtKey := "jwtsecrettoken"
-	srv := service.NewServerService(storage, jwtKey, notifier)
+	srv := service.NewServerService(db, jwtKey, notifier)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer stop()
 	g, gCtx := errgroup.WithContext(ctx)

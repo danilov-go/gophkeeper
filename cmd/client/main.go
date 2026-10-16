@@ -40,7 +40,7 @@ func main() {
 	}
 	syncChan := make(chan struct{}, 1)
 	srvc := service.NewClientService(storage, send, syncChan)
-	sendInterval := 5 * time.Second
+	sendInterval := 5 * time.Minute
 	stepSend := 5 * time.Second
 	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), sendInterval, stepSend, syncChan)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
