@@ -15,6 +15,7 @@ gophkeeper-server
 gophkeeper-client
 *.out
 *.prof
+*.log
 coverage.out
 .env
 *.env
@@ -23,3 +24,5 @@ local.env
 .vscode/
 *.suo
 *.workspace
+internal/proto/*.pb.go
+internal/proto/*_grpc.pb.go
