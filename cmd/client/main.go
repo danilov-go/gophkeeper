@@ -9,7 +9,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/danilov-go/gophkeeper/internal/client/repository/memory"
+	//"github.com/danilov-go/gophkeeper/internal/client/repository/memory"
+	"github.com/danilov-go/gophkeeper/internal/client/repository/db"
 	"github.com/danilov-go/gophkeeper/internal/client/sender"
 	"github.com/danilov-go/gophkeeper/internal/client/service"
 	"github.com/danilov-go/gophkeeper/internal/client/tui"
@@ -26,7 +27,11 @@ func main() {
 	if err := cfg.Get(); err != nil {
 		logger.Log.Sugar().Fatal("ошибка загрузки конфигурации клиента")
 	}
-	storage := memory.InitMemStorage()
+	//storage := memory.InitMemStorage()
+	db, err := db.InitDB(cfg.PathDB)
+	if err != nil {
+		logger.Log.Sugar().Fatal("ошибка инициализации базы данных", "error", err)
+	}
 	var send service.Sender
 	deviceID := fmt.Sprintf("%d", os.Getpid())
 	if cfg.Protocol == "grpc" {
@@ -39,7 +44,7 @@ func main() {
 		send = sender.NewHTTPSender(*cfg, logger.Log.Sugar(), deviceID)
 	}
 	syncChan := make(chan struct{}, 1)
-	srvc := service.NewClientService(storage, send, syncChan)
+	srvc := service.NewClientService(db, send, syncChan)
 	sendInterval := 5 * time.Minute
 	stepSend := 5 * time.Second
 	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), sendInterval, stepSend, syncChan)

@@ -13,6 +13,7 @@ type ConfigClient struct {
 	Net        NetAddress `mapstructure:"address"`
 	ConfigPath string     `mapstructure:"config_path"`
 	Protocol   string     `mapstructure:"protocol"`
+	PathDB     string     `mapstructure:"path_db"`
 }
 
 // Get парсит конфигурацию клиента.
@@ -25,6 +26,9 @@ func (c *ConfigClient) Get() error {
 	}
 	if pflag.CommandLine.Lookup("protocol") == nil {
 		pflag.CommandLine.StringP("protocol", "p", "", "Transport protocol to use")
+	}
+	if pflag.CommandLine.Lookup("pathDB") == nil {
+		pflag.CommandLine.StringP("pathDB", "d", "", "Path to DB file")
 	}
 	pflag.Parse()
 	v := viper.New()
@@ -39,6 +43,9 @@ func (c *ConfigClient) Get() error {
 		return err
 	}
 	if err := v.BindPFlag("config_path", pflag.CommandLine.Lookup("configPath")); err != nil {
+		return err
+	}
+	if err := v.BindPFlag("path_db", pflag.CommandLine.Lookup("pathDB")); err != nil {
 		return err
 	}
 	configFilePath := v.GetString("config_path")

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/danilov-go/gophkeeper/internal/models"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -25,18 +27,35 @@ func NewStorageDB(sql *sql.DB) *storageDB {
 }
 
 // InitDB инициализирует подключение к базе данных PostgreSQL по переданной строке соединения.
-func InitDB(dsn string) (*storageDB, error) {
-	db, err := sql.Open("pgx", dsn)
+func InitDB(ps string) (*storageDB, error) {
+	db, err := sql.Open("pgx", ps)
 	if err != nil {
 		return nil, err
 	}
-	if err := db.Ping(); err != nil {
-		db.Close()
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, errors.Join(err, closeErr)
+		}
 		return nil, err
 	}
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://migrations/server",
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, errors.Join(err, closeErr)
+		}
+		return nil, err
+	}
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, errors.Join(err, closeErr)
+		}
+		return nil, err
+	}
 	return &storageDB{
 		db: db,
 	}, nil
@@ -144,7 +163,7 @@ func (s *storageDB) Delete(ctx context.Context, userID, id int) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	const query = `
+	query := `
 		UPDATE secrets 
 		SET deleted = TRUE, version = version + 1, updated_at = $1 
 		WHERE user_id = $2 AND id = $3;`
