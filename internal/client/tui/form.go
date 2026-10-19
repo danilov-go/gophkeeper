@@ -63,6 +63,7 @@ func NewEditForm(srv SecretService, secret models.Secret) FormModel {
 		inputs[1].SetValue(meta.URL)
 		inputs[2].SetValue(lp.Login)
 		inputs[3].SetValue(lp.Password)
+		inputs[4].SetValue(lp.SecretTOTP)
 	case models.TypeText:
 		meta := secret.Meta.(*models.MetaText)
 		txt := secret.Data.(*models.TextData)
@@ -101,6 +102,7 @@ func newOptions(sType models.SecretType) []FormOption {
 			{Label: "URL", Data: "http://yandex.ru", Limit: 40},
 			{Label: "Логин / Email", Data: "Введите логин ...", Limit: 40},
 			{Label: "Пароль", Data: "Введите пароль ...", Limit: 40, Hide: true},
+			{Label: "TOTP", Data: "Введите TOTP ...", Limit: 40, Hide: true},
 		}
 	case models.TypeText:
 		return []FormOption{
@@ -166,7 +168,7 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m FormModel) View() string {
 	var s strings.Builder
 	if m.secretID != "" {
-		s.WriteString(fmt.Sprintf("Редактирование записи [ID: %d]: %s\n\n", m.secretID, m.sType))
+		s.WriteString(fmt.Sprintf("Редактирование записи [ID: %s]: %s\n\n", m.secretID, m.sType))
 	} else {
 		s.WriteString(fmt.Sprintf("Добавление записи: %s\n\n", m.sType))
 	}
@@ -241,8 +243,9 @@ func (m FormModel) saveCmd() tea.Cmd {
 				URL:  m.inputs[1].Value(),
 			}
 			data = &models.LoginPassword{
-				Login:    m.inputs[2].Value(),
-				Password: m.inputs[3].Value(),
+				Login:      m.inputs[2].Value(),
+				Password:   m.inputs[3].Value(),
+				SecretTOTP: m.inputs[4].Value(),
 			}
 		case models.TypeText:
 			meta = &models.MetaText{

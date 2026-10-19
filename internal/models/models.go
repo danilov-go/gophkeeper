@@ -21,8 +21,9 @@ type CipherData struct {
 
 // LoginPassword определяет пары логин/пароль.
 type LoginPassword struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Login      string `json:"login"`
+	Password   string `json:"password"`
+	SecretTOTP string `json:"secret_totp,omitempty"`
 }
 
 // TextData определяет произвольный текст.

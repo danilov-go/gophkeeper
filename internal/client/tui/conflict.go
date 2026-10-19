@@ -42,6 +42,9 @@ func (m ConflictModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg
 		return m, nil
 	case tea.KeyMsg:
+		if msg.String() == "esc" {
+			return m, nil
+		}
 		if len(m.conflicts) == 0 {
 			return m, nil
 		}
@@ -82,12 +85,22 @@ func (m ConflictModel) View() string {
 		if i == m.cursor {
 			cursorStr = ">"
 		}
-		b.WriteString(fmt.Sprintf("%s Конфликт в секрете ID %d (Тип: %s)\n", cursorStr, c.ID, c.Local.Type))
+		b.WriteString(fmt.Sprintf("%s Конфликт в секрете ID %s (Тип: %s)\n", cursorStr, c.ID, c.Local.Type))
 		if i == m.cursor {
-			b.WriteString("[1] Версия сервера \n")
+			serverForm := NewEditForm(m.service, c.Server)
+			for idx := range serverForm.inputs {
+				serverForm.inputs[idx].Blur()
+			}
+			localForm := NewEditForm(m.service, c.Local)
+			for idx := range localForm.inputs {
+				localForm.inputs[idx].Blur()
+			}
+			b.WriteString(" Версия сервера \n")
 			b.WriteString(fmt.Sprintf("Данные: %v \n", c.Server.Data))
-			b.WriteString("[2] Локальная версия\n")
+			b.WriteString(serverForm.View() + "\n")
+			b.WriteString(" Локальная версия\n")
 			b.WriteString(fmt.Sprintf("Данные: %v \n", c.Local.Data))
+			b.WriteString(localForm.View() + "\n")
 		}
 	}
 	return b.String()

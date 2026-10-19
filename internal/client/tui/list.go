@@ -5,14 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danilov-go/gophkeeper/internal/models"
+	"github.com/pquerna/otp/totp"
 )
 
 type MsgList struct {
 	Text string
 }
+
+type MsgOTP time.Time
 
 type ListModel struct {
 	service   SecretService
@@ -21,28 +25,42 @@ type ListModel struct {
 	cursor    int
 	err       error
 	statusMsg string
+	tikerTOTP int
 }
 
 func NewListModel(srv SecretService, sType models.SecretType) ListModel {
 	return ListModel{
-		service: srv,
-		sType:   sType,
-		secrets: []models.Secret{},
+		service:   srv,
+		sType:     sType,
+		secrets:   []models.Secret{},
+		tikerTOTP: int(30 - (time.Now().Unix() % 30)),
 	}
 }
 
 func (m ListModel) Init() tea.Cmd {
-	return func() tea.Msg {
-		data, err := m.service.GetAll(context.Background(), m.sType)
-		if err != nil {
-			return err
-		}
-		return data
-	}
+	return tea.Batch(
+		func() tea.Msg {
+			data, err := m.service.GetAll(context.Background(), m.sType)
+			if err != nil {
+				return err
+			}
+			return data
+		},
+		Tick(),
+	)
+}
+
+func Tick() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return MsgOTP(t)
+	})
 }
 
 func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case MsgOTP:
+		m.tikerTOTP = int(30 - (time.Now().Unix() % 30))
+		return m, Tick()
 	case SyncOccurrenceMsg:
 		m.statusMsg = "Данные обновлены"
 		return m, m.Init()
@@ -118,19 +136,29 @@ func (m ListModel) View() string {
 			}
 			switch v := secret.Meta.(type) {
 			case *models.MetaCard:
-				s.WriteString(fmt.Sprintf("%s [ID: %d] Карта: %s [%s]\n", cursor, secret.ID, v.Name, v.BankName))
+				s.WriteString(fmt.Sprintf("%s [ID: %s] Карта: %s [%s]\n", cursor, secret.ID, v.Name, v.BankName))
+
 			case *models.MetaLoginPassword:
-				s.WriteString(fmt.Sprintf("%s [ID: %d] Аккаунт: %s (%s)\n", cursor, secret.ID, v.Name, v.URL))
+				otpCode := "Not configured"
+				if lp, ok := secret.Data.(*models.LoginPassword); ok && lp.SecretTOTP != "" {
+					var err error
+					otpCode, err = totp.GenerateCode(lp.SecretTOTP, time.Now())
+					if err != nil {
+						otpCode = "Invalid Secret"
+					}
+				}
+				s.WriteString(fmt.Sprintf("%s [ID: %s] Аккаунт: %s (%s) | 2FA: %s, Время действия TOTP: %d\n", cursor, secret.ID, v.Name, v.URL, otpCode, m.tikerTOTP))
+
 			case *models.MetaText:
 				preview := v.Name
 				if len(preview) > 30 {
 					preview = preview[:27] + "..."
 				}
-				s.WriteString(fmt.Sprintf("%s [ID: %d] Заметка: %s\n", cursor, secret.ID, preview))
+				s.WriteString(fmt.Sprintf("%s [ID: %s] Заметка: %s\n", cursor, secret.ID, preview))
 			case *models.MetaBinary:
-				s.WriteString(fmt.Sprintf("%s [ID: %d] Файл: %s (%s) | %d байт\n", cursor, secret.ID, v.Name, v.Type, v.Size))
+				s.WriteString(fmt.Sprintf("%s [ID: %s] Файл: %s (%s) | %d байт\n", cursor, secret.ID, v.Name, v.Type, v.Size))
 			default:
-				s.WriteString(fmt.Sprintf("%s [ID: %d] Данные неизвестного типа\n", cursor, secret.ID))
+				s.WriteString(fmt.Sprintf("%s [ID: %s] Данные неизвестного типа\n", cursor, secret.ID))
 			}
 		}
 	}
