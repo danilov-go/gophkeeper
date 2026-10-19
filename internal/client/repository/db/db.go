@@ -57,6 +57,14 @@ func (s *storageDB) createTable() error {
 			secret_id INTEGER NOT NULL,
 			secret_data TEXT NOT NULL
 		);`,
+		`CREATE TABLE IF NOT EXISTS conflicts (
+			id INTEGER PRIMARY KEY,
+			type TEXT NOT NULL,
+			cipher BLOB NOT NULL,
+			updated_at DATETIME NOT NULL,
+			version INTEGER NOT NULL,
+			deleted INTEGER NOT NULL
+		);`,
 	}
 	for _, q := range queries {
 		if _, err := s.db.Exec(q); err != nil {

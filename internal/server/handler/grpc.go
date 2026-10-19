@@ -62,7 +62,10 @@ func (s *GRPCHandler) Pull(ctx context.Context, req *proto.PullRequest) (*proto.
 	}
 	versions := make(models.SecretVersions)
 	for k, v := range req.Versions {
-		versions[int(k)] = int(v)
+		versions[int(k)] = models.VersionTime{
+			Version:   int(v.Version),
+			UpdatedAt: time.Unix(0, v.UpdatedAt),
+		}
 	}
 	secrets, err := s.service.Pull(ctx, userID, versions)
 	if err != nil {

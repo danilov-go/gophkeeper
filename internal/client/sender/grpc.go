@@ -82,7 +82,7 @@ func (s *GRPCSender) Auth(ctx context.Context, login, hash string) error {
 	return nil
 }
 
-func (s *GRPCSender) Sync(ctx context.Context, versions map[int]int, changelogs []models.Changelog) ([]models.CipherData, error) {
+func (s *GRPCSender) Sync(ctx context.Context, versions map[int]models.VersionTime, changelogs []models.Changelog) ([]models.CipherData, error) {
 	s.mu.RLock()
 	token := s.token
 	s.mu.RUnlock()
@@ -90,9 +90,12 @@ func (s *GRPCSender) Sync(ctx context.Context, versions map[int]int, changelogs 
 		return nil, errors.New("клиент не авторизован")
 	}
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
-	version := make(map[int32]int32)
+	version := make(map[int32]*proto.VersionTime)
 	for k, v := range versions {
-		version[int32(k)] = int32(v)
+		version[int32(k)] = &proto.VersionTime{
+			Version:   int32(v.Version),
+			UpdatedAt: v.UpdatedAt.UnixNano(),
+		}
 	}
 	resp, err := s.client.Pull(ctx, &proto.PullRequest{Versions: version})
 	if err != nil {

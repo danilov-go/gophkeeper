@@ -11,6 +11,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/proto"
 	"github.com/danilov-go/gophkeeper/internal/server/handler"
 	"github.com/danilov-go/gophkeeper/internal/server/repository/db"
+	"github.com/danilov-go/gophkeeper/internal/strategy"
 
 	//"github.com/danilov-go/gophkeeper/internal/server/repository/memory"
 	"github.com/danilov-go/gophkeeper/internal/server/service"
@@ -30,7 +31,8 @@ func main() {
 		logger.Log.Sugar().Fatal("ошибка загрузки конфигурации сервера")
 	}
 	//storage := memory.InitMemStorage()
-	db, err := db.InitDB(cfg.DatabaseDSN)
+	conflict := strategy.NewServerStrategy()
+	db, err := db.InitDB(cfg.DatabaseDSN, conflict)
 	if err != nil {
 		logger.Log.Sugar().Fatalw("ошибка инициализации базы данных", "error", err)
 	}

@@ -15,19 +15,25 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+type Strategy interface {
+	Rules(id int, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
+}
+
 type storageDB struct {
-	db *sql.DB
+	db       *sql.DB
+	strategy Strategy
 }
 
 // NewStorageDB создает новый экземпляр storageDB.
-func NewStorageDB(sql *sql.DB) *storageDB {
+func NewStorageDB(sql *sql.DB, strategy Strategy) *storageDB {
 	return &storageDB{
-		db: sql,
+		db:       sql,
+		strategy: strategy,
 	}
 }
 
 // InitDB инициализирует подключение к базе данных PostgreSQL по переданной строке соединения.
-func InitDB(ps string) (*storageDB, error) {
+func InitDB(ps string, strategy Strategy) (*storageDB, error) {
 	db, err := sql.Open("pgx", ps)
 	if err != nil {
 		return nil, err
@@ -40,7 +46,7 @@ func InitDB(ps string) (*storageDB, error) {
 		return nil, err
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations/server",
+		"file://migrations",
 		"postgres",
 		driver,
 	)
@@ -57,7 +63,8 @@ func InitDB(ps string) (*storageDB, error) {
 		return nil, err
 	}
 	return &storageDB{
-		db: db,
+		db:       db,
+		strategy: strategy,
 	}, nil
 }
 
@@ -65,7 +72,7 @@ func (s *storageDB) GetSecrets(ctx context.Context, userID int, v models.SecretV
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	query := `SELECT id, data, version FROM secrets WHERE user_id = $1;`
+	query := `SELECT id, data, version, updated_at FROM secrets WHERE user_id = $1;`
 	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
@@ -74,14 +81,14 @@ func (s *storageDB) GetSecrets(ctx context.Context, userID int, v models.SecretV
 	var cipherData []models.CipherData
 	for rows.Next() {
 		var id, version int
-		var jsonData []byte
-		if err := rows.Scan(&id, &jsonData, &version); err != nil {
+		var data []byte
+		var updatedAt time.Time
+		if err := rows.Scan(&id, &data, &version, &updatedAt); err != nil {
 			return nil, err
 		}
-		clientVersion, exists := v[id]
-		if !exists || version > clientVersion {
+		if s.strategy.Rules(id, version, updatedAt, v) != models.ActionSkip {
 			var secret models.CipherData
-			if err := json.Unmarshal(jsonData, &secret); err != nil {
+			if err := json.Unmarshal(data, &secret); err != nil {
 				return nil, err
 			}
 			cipherData = append(cipherData, secret)
@@ -112,7 +119,6 @@ func (s *storageDB) UpdateSecrets(ctx context.Context, userID int, changelogs mo
 		    deleted = EXCLUDED.deleted, 
 		    updated_at = EXCLUDED.updated_at
 		WHERE secrets.version < EXCLUDED.version;`
-
 	now := time.Now()
 	for _, changelog := range changelogs {
 		secret := changelog.Secret

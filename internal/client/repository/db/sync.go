@@ -3,27 +3,32 @@ package db
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
-func (s *storageDB) GetVersion(ctx context.Context) (map[int]int, error) {
+func (s *storageDB) GetVersion(ctx context.Context) (map[int]models.VersionTime, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	query := `SELECT id, version FROM secrets`
+	query := `SELECT id, version, updated_at FROM secrets`
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	versions := make(map[int]int)
+	versions := make(map[int]models.VersionTime)
 	for rows.Next() {
 		var id, version int
-		if err := rows.Scan(&id, &version); err != nil {
+		var updatedAt time.Time
+		if err := rows.Scan(&id, &version, &updatedAt); err != nil {
 			return nil, err
 		}
-		versions[id] = version
+		versions[id] = models.VersionTime{
+			Version:   version,
+			UpdatedAt: updatedAt,
+		}
 	}
 	return versions, nil
 }

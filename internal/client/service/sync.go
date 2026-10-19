@@ -1,8 +1,15 @@
 package service
 
-import "context"
+import (
+	"context"
+
+	"github.com/danilov-go/gophkeeper/internal/models"
+)
 
 func (s *ClientService) SyncData(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	localVersions, err := s.storage.GetVersion(ctx)
 	if err != nil {
 		return err
@@ -15,15 +22,27 @@ func (s *ClientService) SyncData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if len(cipherData) > 0 {
-		err = s.storage.SyncUpdate(ctx, cipherData)
+	var updateSecrets []models.CipherData
+	for _, secret := range cipherData {
+		switch s.strategy.Rules(secret.ID, secret.Version, secret.UpdatedAt, localVersions) {
+		case models.ActionConflict:
+			_ = s.storage.SaveConflict(ctx, secret)
+		case models.ActionUpdateSecret:
+			updateSecrets = append(updateSecrets, secret)
+		case models.ActionSkip:
+			continue
+		}
+	}
+	if len(updateSecrets) > 0 {
+		err = s.storage.SyncUpdate(ctx, updateSecrets)
 		if err != nil {
 			return err
 		}
 	}
 	if len(changelogs) > 0 {
-		lastLogID := changelogs[len(changelogs)-1].ID
-		_ = s.storage.DeleteChangelog(lastLogID)
+		for _, lg := range changelogs {
+			_ = s.storage.DeleteChangelog(lg.ID)
+		}
 	}
 	return nil
 }

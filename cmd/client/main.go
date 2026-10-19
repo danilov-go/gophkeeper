@@ -17,6 +17,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/client/worker"
 	"github.com/danilov-go/gophkeeper/internal/config"
 	"github.com/danilov-go/gophkeeper/internal/logger"
+	"github.com/danilov-go/gophkeeper/internal/strategy"
 )
 
 func main() {
@@ -44,7 +45,8 @@ func main() {
 		send = sender.NewHTTPSender(*cfg, logger.Log.Sugar(), deviceID)
 	}
 	syncChan := make(chan struct{}, 1)
-	srvc := service.NewClientService(db, send, syncChan)
+	conflict := strategy.NewClientStrategy()
+	srvc := service.NewClientService(db, send, conflict, syncChan)
 	sendInterval := 5 * time.Minute
 	stepSend := 5 * time.Second
 	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), sendInterval, stepSend, syncChan)

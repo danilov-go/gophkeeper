@@ -8,7 +8,12 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+type Strategy interface {
+	Rules(id int, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
+}
+
 type MemStorage struct {
+	strategy   Strategy
 	mu         sync.RWMutex
 	nextID     int
 	usersID    map[int]models.User
@@ -16,8 +21,9 @@ type MemStorage struct {
 	secrets    map[int]map[int]models.CipherData
 }
 
-func InitMemStorage() *MemStorage {
+func InitMemStorage(strategy Strategy) *MemStorage {
 	return &MemStorage{
+		strategy:   strategy,
 		nextID:     1,
 		usersID:    make(map[int]models.User),
 		usersLogin: make(map[string]int),
@@ -36,9 +42,8 @@ func (m *MemStorage) GetSecrets(ctx context.Context, userID int, v models.Secret
 		return nil, nil
 	}
 	var cipherData []models.CipherData
-	for id, secret := range secrets {
-		version, ok := v[id]
-		if !ok || secret.Version > version {
+	for _, secret := range secrets {
+		if m.strategy.Rules(secret.ID, secret.Version, secret.UpdatedAt, v) != models.ActionSkip {
 			cipherData = append(cipherData, secret)
 		}
 	}
@@ -57,16 +62,17 @@ func (m *MemStorage) UpdateSecrets(ctx context.Context, userID int, changelogs m
 	if _, ok := m.secrets[userID]; !ok {
 		m.secrets[userID] = make(map[int]models.CipherData)
 	}
+	now := time.Now()
 	for _, changelog := range changelogs {
 		secret := changelog.Secret
 		id := changelog.SecretID
 		serverSecret, exists := m.secrets[userID][id]
 		if !exists {
-			secret.UpdatedAt = time.Now()
+			secret.UpdatedAt = now
 			m.secrets[userID][id] = secret
 		} else {
 			if secret.Version > serverSecret.Version {
-				secret.UpdatedAt = time.Now()
+				secret.UpdatedAt = now
 				m.secrets[userID][id] = secret
 			}
 		}

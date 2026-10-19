@@ -20,6 +20,8 @@ type SecretService interface {
 	GetFile(path string) ([]byte, error)
 	ExportFile(path string, data []byte) error
 	Logout()
+	GetConflicts(ctx context.Context) ([]models.Conflict, error)
+	FixConflict(ctx context.Context, id int, keepServer bool) error
 }
 
 type sessionState int
@@ -30,6 +32,7 @@ const (
 	menuState
 	listState
 	formState
+	conflictState
 )
 
 type AppModel struct {
@@ -42,6 +45,7 @@ type AppModel struct {
 	menu           MenuModel
 	list           ListModel
 	form           FormModel
+	conflict       ConflictModel
 }
 
 func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrenceChan <-chan struct{}) AppModel {
@@ -52,6 +56,7 @@ func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrenceChan
 		occurrenceChan: occurrenceChan,
 		authMenu:       NewAuthMenuModel(),
 		list:           NewListModel(storage, models.SecretType("")),
+		conflict:       NewConflictModel(storage),
 	}
 }
 
@@ -180,6 +185,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, formCmd
+	case conflictState:
+		if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.String() == "esc" {
+			m.state = menuState
+			return m, nil
+		}
+		updatedConflict, conflictCmd := m.conflict.Update(msg)
+		m.conflict = updatedConflict.(ConflictModel)
+		return m, conflictCmd
 	}
 	return m, nil
 }
@@ -196,6 +209,8 @@ func (m AppModel) View() string {
 		return m.list.View()
 	case formState:
 		return m.form.View()
+	case conflictState:
+		return m.conflict.View()
 	default:
 		return "Неизвестное состояние приложения."
 	}

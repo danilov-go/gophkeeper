@@ -113,7 +113,7 @@ func (s *HTTPSender) Auth(ctx context.Context, login, hash string) error {
 	return nil
 }
 
-func (s *HTTPSender) Sync(ctx context.Context, versions map[int]int, changelogs []models.Changelog) ([]models.CipherData, error) {
+func (s *HTTPSender) Sync(ctx context.Context, versions map[int]models.VersionTime, changelogs []models.Changelog) ([]models.CipherData, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (s *HTTPSender) Sync(ctx context.Context, versions map[int]int, changelogs 
 	return cipherData, nil
 }
 
-func (s *HTTPSender) pull(ctx context.Context, versions map[int]int, token string) ([]models.CipherData, error) {
+func (s *HTTPSender) pull(ctx context.Context, versions map[int]models.VersionTime, token string) ([]models.CipherData, error) {
 	resp, err := s.client.R().
 		SetContext(ctx).
 		SetAuthToken(token).
