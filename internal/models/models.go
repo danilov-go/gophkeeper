@@ -10,7 +10,7 @@ type SecretID struct {
 
 // CipherData содержит зашифрованные данных для передачи.
 type CipherData struct {
-	ID        int        `json:"id,omitempty"`
+	ID        string     `json:"id,omitempty"`
 	UserID    int        `json:"-"`
 	Type      SecretType `json:"type"`
 	Cipher    []byte     `json:"cipher"`

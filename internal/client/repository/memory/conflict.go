@@ -30,7 +30,7 @@ func (m *MemStorage) GetConflicts(ctx context.Context) ([]models.CipherData, err
 	return list, nil
 }
 
-func (m *MemStorage) DeleteConflict(ctx context.Context, id int) error {
+func (m *MemStorage) DeleteConflict(ctx context.Context, id string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

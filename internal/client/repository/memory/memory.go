@@ -12,22 +12,22 @@ import (
 type MemStorage struct {
 	mu        sync.RWMutex
 	nextID    int
-	secrets   map[int]models.CipherData
+	secrets   map[string]models.CipherData
 	nextLogID int
 	changelog []models.Changelog
 	user      map[string]models.LocalUser
-	conflicts map[int]models.CipherData
+	conflicts map[string]models.CipherData
 }
 
 // InitMemStorage создает новый экземпляр MemStorage.
 func InitMemStorage() *MemStorage {
 	return &MemStorage{
 		nextID:    1,
-		secrets:   make(map[int]models.CipherData),
+		secrets:   make(map[string]models.CipherData),
 		nextLogID: 1,
 		changelog: make([]models.Changelog, 0),
 		user:      make(map[string]models.LocalUser),
-		conflicts: make(map[int]models.CipherData),
+		conflicts: make(map[string]models.CipherData),
 	}
 }
 

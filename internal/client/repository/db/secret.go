@@ -8,44 +8,43 @@ import (
 	"time"
 
 	"github.com/danilov-go/gophkeeper/internal/models"
+	"github.com/google/uuid"
 )
 
-func (s *storageDB) SaveSecret(ctx context.Context, secret models.CipherData) (int, error) {
+func (s *storageDB) SaveSecret(ctx context.Context, secret models.CipherData) (string, error) {
 	if err := ctx.Err(); err != nil {
-		return 0, err
+		return "", err
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	defer tx.Rollback()
+	if secret.ID == "" {
+		secret.ID = uuid.New().String()
+	}
 	secret.Version = 1
 	if secret.UpdatedAt.IsZero() {
 		secret.UpdatedAt = time.Now()
 	}
-	query := `INSERT INTO secrets (type, cipher, updated_at, version, deleted) VALUES (?, ?, ?, ?, ?)`
-	res, err := tx.ExecContext(ctx, query, secret.Type, secret.Cipher, secret.UpdatedAt, secret.Version, 0)
+	query := `INSERT INTO secrets (id, type, cipher, updated_at, version, deleted) VALUES (?, ?, ?, ?, ?, ?)`
+	_, err = tx.ExecContext(ctx, query, secret.ID, secret.Type, secret.Cipher, secret.UpdatedAt, secret.Version, 0)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-	secret.ID = int(id)
 	cipherData, err := json.Marshal(secret)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	query = `INSERT INTO changelog (action, secret_id, secret_data) VALUES (?, ?, ?)`
 	_, err = tx.ExecContext(ctx, query, models.ActionCreate, secret.ID, string(cipherData))
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	return secret.ID, tx.Commit()
 }
 
-func (s *storageDB) GetSecret(ctx context.Context, id int) (models.CipherData, error) {
+func (s *storageDB) GetSecret(ctx context.Context, id string) (models.CipherData, error) {
 	var secret models.CipherData
 	if err := ctx.Err(); err != nil {
 		return secret, err
@@ -101,17 +100,16 @@ func (s *storageDB) UpdateSecret(ctx context.Context, secret models.CipherData) 
 		return err
 	}
 	defer tx.Rollback()
-
-	var currentVersion int
+	var version int
 	query := `SELECT version FROM secrets WHERE id = ?`
-	err = tx.QueryRowContext(ctx, query, secret.ID).Scan(&currentVersion)
+	err = tx.QueryRowContext(ctx, query, secret.ID).Scan(&version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return errors.New("данные отсутствуют в хранилище")
 	}
 	if err != nil {
 		return err
 	}
-	secret.Version = currentVersion + 1
+	secret.Version = version + 1
 	secret.UpdatedAt = time.Now()
 	query = `UPDATE secrets SET version = ?, cipher = ?, updated_at = ? WHERE id = ?`
 	_, err = tx.ExecContext(ctx, query, secret.Version, secret.Cipher, secret.UpdatedAt, secret.ID)
@@ -130,7 +128,7 @@ func (s *storageDB) UpdateSecret(ctx context.Context, secret models.CipherData) 
 	return tx.Commit()
 }
 
-func (s *storageDB) DeleteSecret(ctx context.Context, id int) error {
+func (s *storageDB) DeleteSecret(ctx context.Context, id string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

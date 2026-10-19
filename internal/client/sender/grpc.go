@@ -82,7 +82,7 @@ func (s *GRPCSender) Auth(ctx context.Context, login, hash string) error {
 	return nil
 }
 
-func (s *GRPCSender) Sync(ctx context.Context, versions map[int]models.VersionTime, changelogs []models.Changelog) ([]models.CipherData, error) {
+func (s *GRPCSender) Sync(ctx context.Context, versions map[string]models.VersionTime, changelogs []models.Changelog) ([]models.CipherData, error) {
 	s.mu.RLock()
 	token := s.token
 	s.mu.RUnlock()
@@ -90,11 +90,11 @@ func (s *GRPCSender) Sync(ctx context.Context, versions map[int]models.VersionTi
 		return nil, errors.New("клиент не авторизован")
 	}
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
-	version := make(map[int32]*proto.VersionTime)
+	version := make(map[string]*proto.VersionTime)
 	for k, v := range versions {
-		version[int32(k)] = &proto.VersionTime{
+		version[string(k)] = &proto.VersionTime{
 			Version:   int32(v.Version),
-			UpdatedAt: v.UpdatedAt.UnixNano(),
+			UpdatedAt: v.UpdatedAt.UTC().UnixNano(),
 		}
 	}
 	resp, err := s.client.Pull(ctx, &proto.PullRequest{Versions: version})
@@ -103,11 +103,12 @@ func (s *GRPCSender) Sync(ctx context.Context, versions map[int]models.VersionTi
 	}
 	var cipherData []models.CipherData
 	for _, sec := range resp.Secrets {
+		serverTime := time.Unix(sec.UpdatedAt/1e9, sec.UpdatedAt%1e9).UTC()
 		cipherData = append(cipherData, models.CipherData{
-			ID:        int(sec.Id),
+			ID:        sec.Id,
 			Type:      models.SecretType(sec.Type),
 			Cipher:    sec.Cipher,
-			UpdatedAt: time.Unix(0, sec.UpdatedAt),
+			UpdatedAt: serverTime,
 			Version:   int(sec.Version),
 			Deleted:   sec.Deleted,
 		})
@@ -116,17 +117,17 @@ func (s *GRPCSender) Sync(ctx context.Context, versions map[int]models.VersionTi
 		var protoLogs []*proto.Changelog
 		for _, log := range changelogs {
 			cipherData := &proto.CipherData{
-				Id:        int32(log.Secret.ID),
+				Id:        log.Secret.ID,
 				Type:      string(log.Secret.Type),
 				Cipher:    log.Secret.Cipher,
-				UpdatedAt: log.Secret.UpdatedAt.UnixNano(),
+				UpdatedAt: log.Secret.UpdatedAt.UTC().UnixNano(),
 				Version:   int32(log.Secret.Version),
 				Deleted:   log.Secret.Deleted,
 			}
 			protoLogs = append(protoLogs, &proto.Changelog{
 				Id:       int32(log.ID),
 				Action:   string(log.Action),
-				SecretId: int32(log.SecretID),
+				SecretId: string(log.SecretID),
 				Secret:   cipherData,
 			})
 		}

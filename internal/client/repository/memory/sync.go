@@ -7,7 +7,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
-func (m *MemStorage) GetVersion(ctx context.Context) (map[int]models.VersionTime, error) {
+func (m *MemStorage) GetVersion(ctx context.Context) (map[string]models.VersionTime, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -16,7 +16,7 @@ func (m *MemStorage) GetVersion(ctx context.Context) (map[int]models.VersionTime
 	if m.secrets == nil {
 		return nil, errors.New("хранилище пустое")
 	}
-	versions := make(map[int]models.VersionTime)
+	versions := make(map[string]models.VersionTime)
 	for id, secret := range m.secrets {
 		versions[id] = models.VersionTime{
 			Version:   secret.Version,
@@ -61,7 +61,7 @@ func (m *MemStorage) SyncUpdate(ctx context.Context, cipherData []models.CipherD
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.secrets == nil {
-		m.secrets = make(map[int]models.CipherData)
+		m.secrets = make(map[string]models.CipherData)
 	}
 	for _, cipher := range cipherData {
 		if cipher.Deleted {
@@ -69,9 +69,7 @@ func (m *MemStorage) SyncUpdate(ctx context.Context, cipherData []models.CipherD
 			continue
 		}
 		m.secrets[cipher.ID] = cipher
-		if cipher.ID >= m.nextID {
-			m.nextID = cipher.ID + 1
-		}
+
 	}
 	return nil
 }

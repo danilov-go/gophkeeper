@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS secrets (
-    id INT NOT NULL,
+    id VARCHAR(36) NOT NULL,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type TEXT NOT NULL,
     data JSONB NOT NULL,

@@ -13,15 +13,16 @@ const (
 type Changelog struct {
 	ID       int        `json:"id"`
 	Action   ActionType `json:"action"`
-	SecretID int        `json:"secret_id"`
+	SecretID string     `json:"secret_id"`
 	Secret   CipherData `json:"secret"`
 }
+
 type VersionTime struct {
 	Version   int       `json:"version"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-type SecretVersions map[int]VersionTime
+type SecretVersions map[string]VersionTime
 type Changelogs []Changelog
 
 type SyncEvent struct {
@@ -39,7 +40,7 @@ const (
 )
 
 type Conflict struct {
-	ID     int
+	ID     string
 	Local  Secret
 	Server Secret
 }

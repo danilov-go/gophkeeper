@@ -3,37 +3,42 @@ package memory
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/danilov-go/gophkeeper/internal/models"
+	"github.com/google/uuid"
 )
 
 // SaveSecret сохраняет секрет.
-func (m *MemStorage) SaveSecret(ctx context.Context, secret models.CipherData) (int, error) {
+func (m *MemStorage) SaveSecret(ctx context.Context, secret models.CipherData) (string, error) {
 	if err := ctx.Err(); err != nil {
-		return 0, err
+		return "", err
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.secrets == nil {
-		m.secrets = make(map[int]models.CipherData)
+		m.secrets = make(map[string]models.CipherData)
 	}
-	id := m.nextID
-	m.nextID++
-	secret.ID = id
+	if secret.ID == "" {
+		secret.ID = uuid.New().String()
+	}
 	secret.Version = 1
-	m.secrets[id] = secret
+	if secret.UpdatedAt.IsZero() {
+		secret.UpdatedAt = time.Now()
+	}
+	m.secrets[secret.ID] = secret
 	m.changelog = append(m.changelog, models.Changelog{
 		ID:       m.nextLogID,
 		Action:   models.ActionCreate,
-		SecretID: id,
+		SecretID: secret.ID,
 		Secret:   secret,
 	})
 	m.nextLogID++
-	return id, nil
+	return secret.ID, nil
 }
 
 // GetSecret возвращает секрет по его ID.
-func (m *MemStorage) GetSecret(ctx context.Context, id int) (models.CipherData, error) {
+func (m *MemStorage) GetSecret(ctx context.Context, id string) (models.CipherData, error) {
 	if err := ctx.Err(); err != nil {
 		return models.CipherData{}, err
 	}
@@ -80,10 +85,12 @@ func (m *MemStorage) UpdateSecret(ctx context.Context, secret models.CipherData)
 	if m.secrets == nil {
 		return errors.New("хранилище пустое")
 	}
-	if _, ok := m.secrets[secret.ID]; !ok {
+	localSecret, ok := m.secrets[secret.ID]
+	if !ok {
 		return errors.New("данные отсутствуют в хранилище")
 	}
-	secret.Version++
+	secret.Version = localSecret.Version + 1
+	secret.UpdatedAt = time.Now()
 	m.secrets[secret.ID] = secret
 	m.changelog = append(m.changelog, models.Changelog{
 		ID:       m.nextLogID,
@@ -96,7 +103,7 @@ func (m *MemStorage) UpdateSecret(ctx context.Context, secret models.CipherData)
 }
 
 // DeleteSecret удаляет секрет по его ID.
-func (m *MemStorage) DeleteSecret(ctx context.Context, id int) error {
+func (m *MemStorage) DeleteSecret(ctx context.Context, id string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

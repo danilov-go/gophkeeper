@@ -26,3 +26,4 @@ local.env
 *.workspace
 internal/proto/*.pb.go
 internal/proto/*_grpc.pb.go
+*.db

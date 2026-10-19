@@ -15,17 +15,17 @@ type payload struct {
 }
 
 // Save сохраняет секрет.
-func (s *ClientService) Save(ctx context.Context, meta models.MetaData, data models.SecretData) (int, error) {
+func (s *ClientService) Save(ctx context.Context, meta models.MetaData, data models.SecretData) (string, error) {
 	s.mu.RLock()
 	if s.key == nil {
 		s.mu.RUnlock()
-		return 0, errors.New("отсутствует ключ шифрования")
+		return "", errors.New("отсутствует ключ шифрования")
 	}
 	key := s.key.Bytes()
 	s.mu.RUnlock()
-	encryptedBody, err := s.encryptPayload(key, meta, data)
+	encryptedBody, err := s.encrypt(key, meta, data)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	cipherData := models.CipherData{
 		Type:   data.SecretType(),
@@ -39,7 +39,7 @@ func (s *ClientService) Save(ctx context.Context, meta models.MetaData, data mod
 }
 
 // Update обновляет существующий секрет по его ID.
-func (s *ClientService) Update(ctx context.Context, id int, meta models.MetaData, data models.SecretData) error {
+func (s *ClientService) Update(ctx context.Context, id string, meta models.MetaData, data models.SecretData) error {
 	secret, err := s.storage.GetSecret(ctx, id)
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (s *ClientService) Update(ctx context.Context, id int, meta models.MetaData
 	}
 	key := s.key.Bytes()
 	s.mu.RUnlock()
-	encryptedBody, err := s.encryptPayload(key, meta, data)
+	encryptedBody, err := s.encrypt(key, meta, data)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (s *ClientService) Update(ctx context.Context, id int, meta models.MetaData
 }
 
 // Delete удаляет секрет по его ID.
-func (s *ClientService) Delete(ctx context.Context, id int) error {
+func (s *ClientService) Delete(ctx context.Context, id string) error {
 	err := s.storage.DeleteSecret(ctx, id)
 	if err == nil {
 		s.trigger()
@@ -93,7 +93,7 @@ func (s *ClientService) GetAll(ctx context.Context, sType models.SecretType) ([]
 	key := s.key.Bytes()
 	s.mu.RUnlock()
 	for _, cs := range cipherData {
-		decryptedData, err := s.decryptCipher(key, cs)
+		decryptedData, err := s.decrypt(key, cs)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func (s *ClientService) GetAll(ctx context.Context, sType models.SecretType) ([]
 	return data, nil
 }
 
-func (s *ClientService) Get(ctx context.Context, id int) (models.Secret, error) {
+func (s *ClientService) Get(ctx context.Context, id string) (models.Secret, error) {
 	var data models.Secret
 	cipherData, err := s.storage.GetSecret(ctx, id)
 	if err != nil {
@@ -115,10 +115,10 @@ func (s *ClientService) Get(ctx context.Context, id int) (models.Secret, error) 
 	}
 	key := s.key.Bytes()
 	s.mu.RUnlock()
-	return s.decryptCipher(key, cipherData)
+	return s.decrypt(key, cipherData)
 }
 
-func (s *ClientService) decryptCipher(key []byte, cs models.CipherData) (models.Secret, error) {
+func (s *ClientService) decrypt(key []byte, cs models.CipherData) (models.Secret, error) {
 	decryptedData, err := crypto.Decrypt(key, cs.Cipher)
 	if err != nil {
 		return models.Secret{}, err
@@ -143,7 +143,7 @@ func (s *ClientService) decryptCipher(key []byte, cs models.CipherData) (models.
 	}, nil
 }
 
-func (s *ClientService) encryptPayload(key []byte, meta models.MetaData, data models.SecretData) ([]byte, error) {
+func (s *ClientService) encrypt(key []byte, meta models.MetaData, data models.SecretData) ([]byte, error) {
 	dataBody, err := json.Marshal(data)
 	if err != nil {
 		return nil, err

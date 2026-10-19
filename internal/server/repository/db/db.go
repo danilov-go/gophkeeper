@@ -16,7 +16,7 @@ import (
 )
 
 type Strategy interface {
-	Rules(id int, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
+	Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
 }
 
 type storageDB struct {
@@ -80,7 +80,8 @@ func (s *storageDB) GetSecrets(ctx context.Context, userID int, v models.SecretV
 	defer rows.Close()
 	var cipherData []models.CipherData
 	for rows.Next() {
-		var id, version int
+		var id string
+		var version int
 		var data []byte
 		var updatedAt time.Time
 		if err := rows.Scan(&id, &data, &version, &updatedAt); err != nil {
@@ -119,16 +120,14 @@ func (s *storageDB) UpdateSecrets(ctx context.Context, userID int, changelogs mo
 		    deleted = EXCLUDED.deleted, 
 		    updated_at = EXCLUDED.updated_at
 		WHERE secrets.version < EXCLUDED.version;`
-	now := time.Now()
 	for _, changelog := range changelogs {
 		secret := changelog.Secret
 		id := changelog.SecretID
-		secret.UpdatedAt = now
 		cipherData, err := json.Marshal(secret)
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, query, id, userID, secret.Type, cipherData, secret.Version, secret.Deleted, now)
+		_, err = tx.ExecContext(ctx, query, id, userID, secret.Type, cipherData, secret.Version, secret.Deleted, secret.UpdatedAt)
 		if err != nil {
 			return err
 		}

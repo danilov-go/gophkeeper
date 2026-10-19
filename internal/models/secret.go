@@ -68,7 +68,7 @@ func NewSecretData(secretType SecretType, body []byte) (SecretData, error) {
 }
 
 type Secret struct {
-	ID   int        `json:"id"`
+	ID   string     `json:"id"`
 	Type SecretType `json:"type"`
 	Data SecretData `json:"data"`
 	Meta MetaData   `json:"meta"`

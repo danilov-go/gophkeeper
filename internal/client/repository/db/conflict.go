@@ -10,7 +10,7 @@ func (s *storageDB) SaveConflict(ctx context.Context, secret models.CipherData) 
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	query := `INSERT OR REPLACE INTO secrets_conflicts (id, type, cipher, updated_at, version, deleted) VALUES (?, ?, ?, ?, ?, ?)`
+	query := `INSERT OR REPLACE INTO conflicts (id, type, cipher, updated_at, version, deleted) VALUES (?, ?, ?, ?, ?, ?)`
 	deletedInt := 0
 	if secret.Deleted {
 		deletedInt = 1
@@ -23,7 +23,7 @@ func (s *storageDB) GetConflicts(ctx context.Context) ([]models.CipherData, erro
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	query := `SELECT id, type, cipher, updated_at, version, deleted FROM secrets_conflicts`
+	query := `SELECT id, type, cipher, updated_at, version, deleted FROM conflicts`
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (s *storageDB) GetConflicts(ctx context.Context) ([]models.CipherData, erro
 	return conflicts, nil
 }
 
-func (s *storageDB) DeleteConflict(ctx context.Context, id int) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM secrets_conflicts WHERE id = ?`, id)
+func (s *storageDB) DeleteConflict(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM conflicts WHERE id = ?`, id)
 	return err
 }

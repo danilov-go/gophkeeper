@@ -12,16 +12,16 @@ type SyncOccurrenceMsg struct{}
 type SecretService interface {
 	Register(ctx context.Context, login, password string) error
 	Login(ctx context.Context, login, password string) error
-	Save(ctx context.Context, meta models.MetaData, data models.SecretData) (int, error)
+	Save(ctx context.Context, meta models.MetaData, data models.SecretData) (string, error)
 	GetAll(ctx context.Context, sType models.SecretType) ([]models.Secret, error)
-	Update(ctx context.Context, id int, meta models.MetaData, data models.SecretData) error
-	Delete(ctx context.Context, id int) error
-	Get(ctx context.Context, id int) (models.Secret, error)
+	Update(ctx context.Context, id string, meta models.MetaData, data models.SecretData) error
+	Delete(ctx context.Context, id string) error
+	Get(ctx context.Context, id string) (models.Secret, error)
 	GetFile(path string) ([]byte, error)
 	ExportFile(path string, data []byte) error
 	Logout()
 	GetConflicts(ctx context.Context) ([]models.Conflict, error)
-	FixConflict(ctx context.Context, id int, keepServer bool) error
+	FixConflict(ctx context.Context, id string, keepServer bool) error
 }
 
 type sessionState int
@@ -134,7 +134,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.authMenu = NewAuthMenuModel()
 				return m, m.authMenu.Init()
 			}
+			if keyMsg.String() == "c" {
+				m.state = conflictState
+				m.conflict = NewConflictModel(m.service)
+				return m, m.conflict.Init()
+			}
 		}
+
 		updatedMenu, menuCmd := m.menu.Update(msg)
 		m.menu = updatedMenu.(MenuModel)
 		if m.menu.chosen {

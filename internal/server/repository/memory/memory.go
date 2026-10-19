@@ -9,7 +9,7 @@ import (
 )
 
 type Strategy interface {
-	Rules(id int, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
+	Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
 }
 
 type MemStorage struct {
@@ -18,7 +18,7 @@ type MemStorage struct {
 	nextID     int
 	usersID    map[int]models.User
 	usersLogin map[string]int
-	secrets    map[int]map[int]models.CipherData
+	secrets    map[int]map[string]models.CipherData
 }
 
 func InitMemStorage(strategy Strategy) *MemStorage {
@@ -27,7 +27,7 @@ func InitMemStorage(strategy Strategy) *MemStorage {
 		nextID:     1,
 		usersID:    make(map[int]models.User),
 		usersLogin: make(map[string]int),
-		secrets:    make(map[int]map[int]models.CipherData),
+		secrets:    make(map[int]map[string]models.CipherData),
 	}
 }
 
@@ -57,22 +57,19 @@ func (m *MemStorage) UpdateSecrets(ctx context.Context, userID int, changelogs m
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.secrets == nil {
-		m.secrets = make(map[int]map[int]models.CipherData)
+		m.secrets = make(map[int]map[string]models.CipherData)
 	}
 	if _, ok := m.secrets[userID]; !ok {
-		m.secrets[userID] = make(map[int]models.CipherData)
+		m.secrets[userID] = make(map[string]models.CipherData)
 	}
-	now := time.Now()
 	for _, changelog := range changelogs {
 		secret := changelog.Secret
 		id := changelog.SecretID
 		serverSecret, exists := m.secrets[userID][id]
 		if !exists {
-			secret.UpdatedAt = now
 			m.secrets[userID][id] = secret
 		} else {
 			if secret.Version > serverSecret.Version {
-				secret.UpdatedAt = now
 				m.secrets[userID][id] = secret
 			}
 		}

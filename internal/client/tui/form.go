@@ -23,7 +23,7 @@ type FormOption struct {
 type FormModel struct {
 	service  SecretService
 	sType    models.SecretType
-	secretID int
+	secretID string
 	option   []FormOption
 	inputs   []textinput.Model
 	focus    int
@@ -37,7 +37,7 @@ func NewFormModel(srv SecretService, sType models.SecretType) FormModel {
 	return FormModel{
 		service:  srv,
 		sType:    sType,
-		secretID: 0,
+		secretID: "",
 		option:   option,
 		inputs:   inputs,
 	}
@@ -165,7 +165,7 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m FormModel) View() string {
 	var s strings.Builder
-	if m.secretID > 0 {
+	if m.secretID != "" {
 		s.WriteString(fmt.Sprintf("Редактирование записи [ID: %d]: %s\n\n", m.secretID, m.sType))
 	} else {
 		s.WriteString(fmt.Sprintf("Добавление записи: %s\n\n", m.sType))
@@ -253,7 +253,7 @@ func (m FormModel) saveCmd() tea.Cmd {
 			}
 		case models.TypeBinary:
 			filePath := m.inputs[3].Value()
-			if filePath == "" && m.secretID == 0 {
+			if filePath == "" && m.secretID == "" {
 				return errors.New("путь к файлу не может быть пустым")
 			}
 			var dataFile []byte
@@ -278,7 +278,7 @@ func (m FormModel) saveCmd() tea.Cmd {
 			}
 		}
 		var err error
-		if m.secretID > 0 {
+		if m.secretID != "" {
 			err = m.service.Update(context.Background(), m.secretID, meta, data)
 		} else {
 			_, err = m.service.Save(context.Background(), meta, data)

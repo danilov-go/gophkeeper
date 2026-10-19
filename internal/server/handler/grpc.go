@@ -62,9 +62,9 @@ func (s *GRPCHandler) Pull(ctx context.Context, req *proto.PullRequest) (*proto.
 	}
 	versions := make(models.SecretVersions)
 	for k, v := range req.Versions {
-		versions[int(k)] = models.VersionTime{
+		versions[string(k)] = models.VersionTime{
 			Version:   int(v.Version),
-			UpdatedAt: time.Unix(0, v.UpdatedAt),
+			UpdatedAt: time.Unix(v.UpdatedAt/1e9, v.UpdatedAt%1e9).UTC(),
 		}
 	}
 	secrets, err := s.service.Pull(ctx, userID, versions)
@@ -75,7 +75,7 @@ func (s *GRPCHandler) Pull(ctx context.Context, req *proto.PullRequest) (*proto.
 	var protoSecrets []*proto.CipherData
 	for _, sec := range secrets {
 		protoSecrets = append(protoSecrets, &proto.CipherData{
-			Id:        int32(sec.ID),
+			Id:        string(sec.ID),
 			Type:      string(sec.Type),
 			Cipher:    sec.Cipher,
 			UpdatedAt: sec.UpdatedAt.UnixNano(),
@@ -96,15 +96,16 @@ func (s *GRPCHandler) Push(ctx context.Context, req *proto.PushRequest) (*proto.
 		if log.Secret == nil {
 			continue
 		}
+		clientTime := time.Unix(log.Secret.UpdatedAt/1e9, log.Secret.UpdatedAt%1e9).UTC()
 		changelogs = append(changelogs, models.Changelog{
 			ID:       int(log.Id),
 			Action:   models.ActionType(log.Action),
-			SecretID: int(log.SecretId),
+			SecretID: string(log.SecretId),
 			Secret: models.CipherData{
-				ID:        int(log.Secret.Id),
+				ID:        log.Secret.Id,
 				Type:      models.SecretType(log.Secret.Type),
 				Cipher:    log.Secret.Cipher,
-				UpdatedAt: time.Unix(0, log.Secret.UpdatedAt),
+				UpdatedAt: clientTime,
 				Version:   int(log.Secret.Version),
 				Deleted:   log.Secret.Deleted,
 			},

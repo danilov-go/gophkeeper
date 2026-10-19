@@ -12,15 +12,15 @@ func NewClientStrategy() ClientStrategy {
 	return ClientStrategy{}
 }
 
-func (s ClientStrategy) Rules(id int, serverVersion int, serverUpdatedAt time.Time, localVersions models.SecretVersions) models.SyncAction {
-	localValue, exists := localVersions[id]
-	if !exists {
+func (s ClientStrategy) Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction {
+	localValue, ok := versions[id]
+	if !ok {
 		return models.ActionUpdateSecret
 	}
-	if serverVersion > localValue.Version {
+	if version > localValue.Version {
 		return models.ActionUpdateSecret
 	}
-	if serverVersion == localValue.Version && !serverUpdatedAt.Equal(localValue.UpdatedAt) {
+	if version == localValue.Version && !updatedAt.Equal(localValue.UpdatedAt) {
 		return models.ActionConflict
 	}
 	return models.ActionSkip
@@ -32,13 +32,13 @@ func NewServerStrategy() ServerStrategy {
 	return ServerStrategy{}
 }
 
-func (s ServerStrategy) Rules(id int, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction {
+func (s ServerStrategy) Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction {
 	v, ok := versions[id]
 	if !ok {
-		return models.ActionConflict
+		return models.ActionUpdateSecret
 	}
 	if version > v.Version {
-		return models.ActionConflict
+		return models.ActionUpdateSecret
 	}
 	if version == v.Version && !updatedAt.Equal(v.UpdatedAt) {
 		return models.ActionConflict

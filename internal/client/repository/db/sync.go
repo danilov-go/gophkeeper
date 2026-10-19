@@ -8,7 +8,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
-func (s *storageDB) GetVersion(ctx context.Context) (map[int]models.VersionTime, error) {
+func (s *storageDB) GetVersion(ctx context.Context) (map[string]models.VersionTime, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -18,9 +18,10 @@ func (s *storageDB) GetVersion(ctx context.Context) (map[int]models.VersionTime,
 		return nil, err
 	}
 	defer rows.Close()
-	versions := make(map[int]models.VersionTime)
+	versions := make(map[string]models.VersionTime)
 	for rows.Next() {
-		var id, version int
+		var id string
+		var version int
 		var updatedAt time.Time
 		if err := rows.Scan(&id, &version, &updatedAt); err != nil {
 			return nil, err

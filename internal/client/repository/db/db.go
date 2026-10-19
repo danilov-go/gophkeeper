@@ -44,7 +44,7 @@ func (s *storageDB) createTable() error {
 			salt TEXT NOT NULL
 		);`,
 		`CREATE TABLE IF NOT EXISTS secrets (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			id TEXT PRIMARY KEY,
 			type TEXT NOT NULL,
 			cipher BLOB NOT NULL,
 			updated_at DATETIME NOT NULL,
@@ -54,11 +54,12 @@ func (s *storageDB) createTable() error {
 		`CREATE TABLE IF NOT EXISTS changelog (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			action TEXT NOT NULL,
-			secret_id INTEGER NOT NULL,
+			secret_id TEXT NOT NULL,
 			secret_data TEXT NOT NULL
 		);`,
+
 		`CREATE TABLE IF NOT EXISTS conflicts (
-			id INTEGER PRIMARY KEY,
+			id TEXT PRIMARY KEY,
 			type TEXT NOT NULL,
 			cipher BLOB NOT NULL,
 			updated_at DATETIME NOT NULL,

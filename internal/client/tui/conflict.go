@@ -82,7 +82,6 @@ func (m ConflictModel) View() string {
 		if i == m.cursor {
 			cursorStr = ">"
 		}
-
 		b.WriteString(fmt.Sprintf("%s Конфликт в секрете ID %d (Тип: %s)\n", cursorStr, c.ID, c.Local.Type))
 		if i == m.cursor {
 			b.WriteString("[1] Версия сервера \n")

@@ -8,7 +8,6 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
-// GetUnresolvedConflicts извлекает все отложенные конфликты и расшифровывает обе версии данных для TUI.
 func (s *ClientService) GetConflicts(ctx context.Context) ([]models.Conflict, error) {
 	conflicts, err := s.storage.GetConflicts(ctx)
 	if err != nil {
@@ -27,7 +26,7 @@ func (s *ClientService) GetConflicts(ctx context.Context) ([]models.Conflict, er
 		if err != nil {
 			localSecret = models.Secret{ID: conflict.ID, Type: conflict.Type}
 		}
-		secret, err := s.decryptCipher(key, conflict)
+		secret, err := s.decrypt(key, conflict)
 		if err != nil {
 			continue
 		}
@@ -40,8 +39,7 @@ func (s *ClientService) GetConflicts(ctx context.Context) ([]models.Conflict, er
 	return result, nil
 }
 
-// ResolveConflictUI применяет выбранное пользователем в TUI решение к конкретному секрету.
-func (s *ClientService) FixConflict(ctx context.Context, id int, keepServer bool) error {
+func (s *ClientService) FixConflict(ctx context.Context, id string, keepServer bool) error {
 	conflicts, err := s.storage.GetConflicts(ctx)
 	if err != nil {
 		return err
