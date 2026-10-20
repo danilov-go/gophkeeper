@@ -8,7 +8,6 @@ import (
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
-	//"github.com/danilov-go/gophkeeper/internal/client/repository/memory"
 	"github.com/danilov-go/gophkeeper/internal/client/repository/db"
 	"github.com/danilov-go/gophkeeper/internal/client/sender"
 	"github.com/danilov-go/gophkeeper/internal/client/service"
@@ -20,14 +19,16 @@ import (
 )
 
 func main() {
-	cfg := &config.ConfigClient{}
 	if err := logger.Initialize("info"); err != nil {
 		panic(err)
 	}
+	cfg := &config.ConfigClient{}
 	if err := cfg.Get(); err != nil {
-		logger.Log.Sugar().Fatal("ошибка загрузки конфигурации клиента")
+		logger.Log.Sugar().Fatal("ошибка парсинга конфигурации клиента")
 	}
-	//storage := memory.InitMemStorage()
+	if err := cfg.Validate(); err != nil {
+		logger.Log.Sugar().Fatal(err)
+	}
 	db, err := db.InitDB(cfg.PathDB)
 	if err != nil {
 		logger.Log.Sugar().Fatal("ошибка инициализации базы данных", "error", err)
@@ -46,8 +47,7 @@ func main() {
 	syncChan := make(chan struct{}, 1)
 	conflict := strategy.NewClientStrategy()
 	srvc := service.NewClientService(db, send, conflict, syncChan)
-
-	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), cfg.SendInterval, cfg.StepSend, syncChan)
+	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), cfg.SendInterval, cfg.Cooldown, syncChan)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer stop()
 	go syncWorker.Run(ctx)

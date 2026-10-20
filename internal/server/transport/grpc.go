@@ -39,7 +39,10 @@ func (serv *GRPCServer) Run() error {
 		listener.Close()
 		return err
 	}
-	tlsConfig := &tls.Config{Certificates: []tls.Certificate{cert}}
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		NextProtos:   []string{"h2"},
+	}
 	serv.Listener = tls.NewListener(listener, tlsConfig)
 	if err := serv.Server.Serve(serv.Listener); err != nil && err != grpc.ErrServerStopped {
 		return err

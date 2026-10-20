@@ -17,17 +17,17 @@ type SyncWorker struct {
 	syncer     Syncer
 	logger     Logger
 	interval   time.Duration
-	step       time.Duration
+	cooldown   time.Duration
 	syncCh     <-chan struct{}
 	occurrence chan struct{}
 }
 
-func NewSyncWorker(syncer Syncer, l Logger, interval time.Duration, step time.Duration, syncCh <-chan struct{}) *SyncWorker {
+func NewSyncWorker(syncer Syncer, l Logger, interval time.Duration, cooldown time.Duration, syncCh <-chan struct{}) *SyncWorker {
 	return &SyncWorker{
 		syncer:     syncer,
 		logger:     l,
 		interval:   interval,
-		step:       step,
+		cooldown:   cooldown,
 		syncCh:     syncCh,
 		occurrence: make(chan struct{}, 1),
 	}
@@ -47,7 +47,7 @@ func (w *SyncWorker) Run(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(w.step):
+			case <-time.After(w.cooldown):
 			}
 		}
 	}

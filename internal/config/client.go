@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -17,7 +18,7 @@ type ConfigClient struct {
 	PathDB       string        `mapstructure:"path_db"`
 	PathTLS      string        `mapstructure:"path_tls"`
 	SendInterval time.Duration `mapstructure:"send_interval"`
-	StepSend     time.Duration `mapstructure:"step_send"`
+	Cooldown     time.Duration `mapstructure:"cooldown"`
 }
 
 // Get парсит конфигурацию клиента.
@@ -38,18 +39,19 @@ func (c *ConfigClient) Get() error {
 		pflag.CommandLine.StringP("PathTLS", "t", "", "Path to TLS")
 	}
 	if pflag.CommandLine.Lookup("sendInterval") == nil {
-		pflag.CommandLine.DurationP("sendInterval", "i", 5*time.Minute, "Interval for full data synchronization")
+		pflag.CommandLine.DurationP("sendInterval", "i", 0, "Interval for full data synchronization")
 	}
-	if pflag.CommandLine.Lookup("stepSend") == nil {
-		pflag.CommandLine.DurationP("stepSend", "s", 5*time.Second, "Step duration for check/send worker")
+	if pflag.CommandLine.Lookup("cooldown") == nil {
+		pflag.CommandLine.DurationP("cooldown", "s", 0, "Minimum interval between synchronizations")
 	}
 	pflag.Parse()
 	v := viper.New()
 	v.SetDefault("address", "localhost:8080")
-	v.SetDefault("protocol", "http")
+	v.SetDefault("protocol", "https")
 	v.SetDefault("path_tls", "certs/ca.crt")
 	v.SetDefault("send_interval", 5*time.Minute)
-	v.SetDefault("step_send", 5*time.Second)
+	v.SetDefault("cooldown", 5*time.Second)
+	v.SetDefault("PathDB", "client.db")
 	v.SetEnvPrefix("client")
 	v.AutomaticEnv()
 	if err := v.BindPFlag("address", pflag.CommandLine.Lookup("address")); err != nil {
@@ -70,7 +72,7 @@ func (c *ConfigClient) Get() error {
 	if err := v.BindPFlag("send_interval", pflag.CommandLine.Lookup("sendInterval")); err != nil {
 		return err
 	}
-	if err := v.BindPFlag("step_send", pflag.CommandLine.Lookup("stepSend")); err != nil {
+	if err := v.BindPFlag("cooldown", pflag.CommandLine.Lookup("cooldown")); err != nil {
 		return err
 	}
 	configFilePath := v.GetString("config_path")
@@ -89,6 +91,39 @@ func (c *ConfigClient) Get() error {
 		),
 	))
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Validate проверяет конфигурацию клиента.
+func (c *ConfigClient) Validate() error {
+	if c.Net.Host == "" {
+		return errors.New("хост не может быть пустым")
+	}
+	if c.Net.Port <= 0 || c.Net.Port > 65535 {
+		return errors.New("передан неверный порт")
+	}
+	if c.Protocol != "grpc" && c.Protocol != "https" {
+		return errors.New("неверный протокол обмена")
+	}
+	if c.SendInterval <= 0 || c.Cooldown <= 0 {
+		return errors.New("интервалы работы воркера должны быть больше нуля")
+	}
+	if c.Cooldown > c.SendInterval {
+		return errors.New("минимальный интервал не может быть больше основного интервала синхронизации")
+	}
+	if c.PathTLS == "" {
+		return errors.New("путь к TLS-сертификату не может быть пустым")
+	}
+	if c.PathDB == "" {
+		return errors.New("путь к базе данных не может быть пустым")
+	}
+	_, err := os.Stat(c.PathTLS)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return errors.New("файл TLS-сертификата не найден")
+		}
 		return err
 	}
 	return nil

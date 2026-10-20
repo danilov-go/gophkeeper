@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 
 	"github.com/mitchellh/mapstructure"
@@ -34,10 +35,10 @@ func (c *ConfigServer) Get() error {
 		pflag.CommandLine.StringP("database_dsn", "d", "", "DatabaseDSN")
 	}
 	if pflag.CommandLine.Lookup("pathTLSCert") == nil {
-		pflag.CommandLine.StringP("pathTLSCert", "cert", "", "Path to TLS certificate")
+		pflag.CommandLine.StringP("pathTLSCert", "r", "", "Path to TLS certificate")
 	}
 	if pflag.CommandLine.Lookup("pathTLSKey") == nil {
-		pflag.CommandLine.StringP("pathTLSKey", "key", "", "Path to TLS key")
+		pflag.CommandLine.StringP("pathTLSKey", "k", "", "Path to TLS key")
 	}
 	if pflag.CommandLine.Lookup("token") == nil {
 		pflag.CommandLine.StringP("token", "t", "", "Authentication token")
@@ -48,7 +49,7 @@ func (c *ConfigServer) Get() error {
 	v.SetDefault("protocol", "https")
 	v.SetDefault("path_tls_cert", "certs/server.crt")
 	v.SetDefault("path_tls_key", "certs/server.key")
-	v.SetDefault("token", "jwtsecrettoken")
+	v.SetDefault("token", "jwt_secret_token")
 	v.SetEnvPrefix("server")
 	v.AutomaticEnv()
 	if err := v.BindPFlag("address", pflag.CommandLine.Lookup("address")); err != nil {
@@ -85,6 +86,49 @@ func (c *ConfigServer) Get() error {
 		),
 	))
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Validate проверяет конфигурацию сервера.
+func (c *ConfigServer) Validate() error {
+	if c.Net.Host == "" {
+		return errors.New("хост не может быть пустым")
+	}
+	if c.Net.Port <= 0 || c.Net.Port > 65535 {
+		return errors.New("передан неверный порт")
+	}
+	if c.Protocol != "grpc" && c.Protocol != "https" {
+		return errors.New("неверный протокол обмена")
+	}
+	if c.DatabaseDSN == "" {
+		return errors.New("строка подключения к базе данных не может быть пустой")
+	}
+	if c.Token == "" {
+		return errors.New("токен не может быть пустым")
+	}
+	if len(c.Token) < 16 {
+		return errors.New("передан короткий токен, для безопасности требуется не менее 16 символов")
+	}
+	if c.PathTLSCert == "" {
+		return errors.New("путь к TLS-сертификату не может быть пустым")
+	}
+	if c.PathTLSKey == "" {
+		return errors.New("путь к TLS-ключу не может быть пустым")
+	}
+	_, err := os.Stat(c.PathTLSCert)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return errors.New("файл TLS-сертификата не найден")
+		}
+		return err
+	}
+	_, err = os.Stat(c.PathTLSKey)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return errors.New("файл TLS-ключа не найден")
+		}
 		return err
 	}
 	return nil

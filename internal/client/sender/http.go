@@ -21,12 +21,13 @@ type log interface {
 }
 
 type HTTPSender struct {
-	client   *resty.Client
-	logger   log
-	key      []byte
-	token    string
-	deviceID string
-	mu       sync.RWMutex
+	client    *resty.Client
+	sseClient *http.Client
+	logger    log
+	key       []byte
+	token     string
+	deviceID  string
+	mu        sync.RWMutex
 }
 
 // NewHTTPSender создает экземпляр HTTPSender.
@@ -47,10 +48,16 @@ func NewHTTPSender(cfg config.ConfigClient, l log, deviceID, pathTLS string) *HT
 		}
 		return false
 	})
+	transport, _ := client.GetClient().Transport.(*http.Transport)
+	sseClient := &http.Client{
+		Timeout:   0,
+		Transport: transport,
+	}
 	return &HTTPSender{
-		client:   client,
-		logger:   l,
-		deviceID: deviceID,
+		client:    client,
+		sseClient: sseClient,
+		logger:    l,
+		deviceID:  deviceID,
 	}
 }
 
@@ -191,9 +198,7 @@ func (s *HTTPSender) Logout() {
 }
 
 func (s *HTTPSender) ServerEvent(ctx context.Context, runSync func()) {
-	client := &http.Client{
-		Timeout: 0,
-	}
+
 	go func() {
 		for {
 			if err := ctx.Err(); err != nil {
@@ -214,7 +219,7 @@ func (s *HTTPSender) ServerEvent(ctx context.Context, runSync func()) {
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("Accept", "text/event-stream")
 			req.Header.Set("device-id", s.deviceID)
-			resp, err := client.Do(req)
+			resp, err := s.sseClient.Do(req)
 			if err != nil {
 				s.logger.Errorw("не удалось подключиться к серверу оповещений", "error", err)
 				time.Sleep(time.Second * 5)

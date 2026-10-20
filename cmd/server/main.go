@@ -10,26 +10,26 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/proto"
 	"github.com/danilov-go/gophkeeper/internal/server/handler"
 	"github.com/danilov-go/gophkeeper/internal/server/repository/db"
-	"github.com/danilov-go/gophkeeper/internal/strategy"
-
-	//"github.com/danilov-go/gophkeeper/internal/server/repository/memory"
 	"github.com/danilov-go/gophkeeper/internal/server/service"
 	"github.com/danilov-go/gophkeeper/internal/server/sync"
 	"github.com/danilov-go/gophkeeper/internal/server/transport"
+	"github.com/danilov-go/gophkeeper/internal/strategy"
 	"github.com/go-chi/chi"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
 func main() {
-	cfg := &config.ConfigServer{}
 	if err := logger.Initialize("info"); err != nil {
 		panic(err)
 	}
+	cfg := &config.ConfigServer{}
 	if err := cfg.Get(); err != nil {
-		logger.Log.Sugar().Fatal("ошибка загрузки конфигурации сервера")
+		logger.Log.Sugar().Fatal("ошибка парсинга конфигурации сервера")
 	}
-	//storage := memory.InitMemStorage()
+	if err := cfg.Validate(); err != nil {
+		logger.Log.Sugar().Fatal(err)
+	}
 	conflict := strategy.NewServerStrategy()
 	db, err := db.InitDB(cfg.DatabaseDSN, conflict)
 	if err != nil {
