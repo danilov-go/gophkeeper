@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	_ "google.golang.org/grpc/encoding/gzip"
 )
 
 func main() {
@@ -63,9 +64,11 @@ func main() {
 			r.Get("/salt", h.GetSalt())
 		})
 		r.Route("/api", func(r chi.Router) {
-			r.Post("/pull", h.AuthMiddleware(h.PullHandler()))
-			r.Post("/push", h.AuthMiddleware(h.PushHandler()))
 			r.Get("/event", h.AuthMiddleware(h.StreamHandler()))
+			r.With(handler.GzipMiddleware).Group(func(r chi.Router) {
+				r.Post("/pull", h.AuthMiddleware(h.PullHandler()))
+				r.Post("/push", h.AuthMiddleware(h.PushHandler()))
+			})
 		})
 		serv := transport.New(cfg.Net.String(), logger.Log.Sugar(), r, ctx, cfg.PathTLSCert, cfg.PathTLSKey)
 		g.Go(func() error {

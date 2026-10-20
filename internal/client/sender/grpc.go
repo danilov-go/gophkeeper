@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -146,7 +147,7 @@ func (s *GRPCSender) Sync(ctx context.Context, versions map[string]models.Versio
 		_, err = s.client.Push(ctx, &proto.PushRequest{
 			DeviceId:   s.deviceID,
 			Changelogs: protoLogs,
-		})
+		}, grpc.UseCompressor("gzip"))
 		if err != nil {
 			return nil, err
 		}

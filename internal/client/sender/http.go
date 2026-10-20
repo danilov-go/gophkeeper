@@ -2,6 +2,8 @@ package sender
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -48,6 +50,7 @@ func NewHTTPSender(cfg config.ConfigClient, l log, deviceID, pathTLS string) *HT
 		}
 		return false
 	})
+	client.OnBeforeRequest(gzipClient)
 	transport, _ := client.GetClient().Transport.(*http.Transport)
 	sseClient := &http.Client{
 		Timeout:   0,
@@ -59,6 +62,26 @@ func NewHTTPSender(cfg config.ConfigClient, l log, deviceID, pathTLS string) *HT
 		logger:    l,
 		deviceID:  deviceID,
 	}
+}
+
+func gzipClient(c *resty.Client, r *resty.Request) error {
+	if r.Method == "POST" && r.Body != nil && strings.HasSuffix(r.URL, "/api/push") {
+		r.SetHeader("Content-Encoding", "gzip")
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+		req, err := json.Marshal(r.Body)
+		if err != nil {
+			return err
+		}
+		if _, err := zw.Write(req); err != nil {
+			return err
+		}
+		if err := zw.Close(); err != nil {
+			return err
+		}
+		r.SetBody(buf.Bytes())
+	}
+	return nil
 }
 
 // Register отправляет запрос на регистрацию нового пользователя.
@@ -178,6 +201,7 @@ func (s *HTTPSender) push(ctx context.Context, changelogs []models.Changelog, to
 		SetContext(ctx).
 		SetAuthToken(token).
 		SetHeader("Content-Type", "application/json").
+		SetHeader("Content-Encoding", "gzip").
 		SetHeader("device-id", s.deviceID).
 		SetBody(changelogs).
 		Post("/api/push")
