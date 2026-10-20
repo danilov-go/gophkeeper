@@ -2,8 +2,11 @@ package sender
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
+	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -12,7 +15,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -26,8 +29,17 @@ type GRPCSender struct {
 	mu       sync.RWMutex
 }
 
-func NewGRPCSender(serverAddr string, l log, deviceID string) (*GRPCSender, error) {
-	conn, err := grpc.NewClient(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func NewGRPCSender(serverAddr string, l log, deviceID, pathTLS string) (*GRPCSender, error) {
+	cert, err := os.ReadFile(pathTLS)
+	if err != nil {
+		return nil, err
+	}
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM(cert); !ok {
+		return nil, fmt.Errorf("ошибка парсинга сертификата")
+	}
+	creds := credentials.NewClientTLSFromCert(certPool, "")
+	conn, err := grpc.NewClient(serverAddr, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return nil, err
 	}

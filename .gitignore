@@ -27,3 +27,5 @@ local.env
 internal/proto/*.pb.go
 internal/proto/*_grpc.pb.go
 *.db
+certs/*.key
+certs/*.csr

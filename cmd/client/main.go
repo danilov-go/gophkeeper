@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	//"github.com/danilov-go/gophkeeper/internal/client/repository/memory"
@@ -37,19 +36,18 @@ func main() {
 	deviceID := fmt.Sprintf("%d", os.Getpid())
 	if cfg.Protocol == "grpc" {
 		var err error
-		send, err = sender.NewGRPCSender(cfg.Net.String(), logger.Log.Sugar(), deviceID)
+		send, err = sender.NewGRPCSender(cfg.Net.String(), logger.Log.Sugar(), deviceID, cfg.PathTLS)
 		if err != nil {
 			logger.Log.Sugar().Fatalw("не удалось запустить gRPC клиент", "error", err)
 		}
 	} else {
-		send = sender.NewHTTPSender(*cfg, logger.Log.Sugar(), deviceID)
+		send = sender.NewHTTPSender(*cfg, logger.Log.Sugar(), deviceID, cfg.PathTLS)
 	}
 	syncChan := make(chan struct{}, 1)
 	conflict := strategy.NewClientStrategy()
 	srvc := service.NewClientService(db, send, conflict, syncChan)
-	sendInterval := 5 * time.Minute
-	stepSend := 5 * time.Second
-	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), sendInterval, stepSend, syncChan)
+
+	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), cfg.SendInterval, cfg.StepSend, syncChan)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer stop()
 	go syncWorker.Run(ctx)

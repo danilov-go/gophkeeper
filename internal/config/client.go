@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/pflag"
@@ -10,10 +11,13 @@ import (
 
 // ConfigClient описывает настройки клиента.
 type ConfigClient struct {
-	Net        NetAddress `mapstructure:"address"`
-	ConfigPath string     `mapstructure:"config_path"`
-	Protocol   string     `mapstructure:"protocol"`
-	PathDB     string     `mapstructure:"path_db"`
+	Net          NetAddress    `mapstructure:"address"`
+	ConfigPath   string        `mapstructure:"config_path"`
+	Protocol     string        `mapstructure:"protocol"`
+	PathDB       string        `mapstructure:"path_db"`
+	PathTLS      string        `mapstructure:"path_tls"`
+	SendInterval time.Duration `mapstructure:"send_interval"`
+	StepSend     time.Duration `mapstructure:"step_send"`
 }
 
 // Get парсит конфигурацию клиента.
@@ -30,10 +34,22 @@ func (c *ConfigClient) Get() error {
 	if pflag.CommandLine.Lookup("pathDB") == nil {
 		pflag.CommandLine.StringP("pathDB", "d", "", "Path to DB file")
 	}
+	if pflag.CommandLine.Lookup("PathTLS") == nil {
+		pflag.CommandLine.StringP("PathTLS", "t", "", "Path to TLS")
+	}
+	if pflag.CommandLine.Lookup("sendInterval") == nil {
+		pflag.CommandLine.DurationP("sendInterval", "i", 5*time.Minute, "Interval for full data synchronization")
+	}
+	if pflag.CommandLine.Lookup("stepSend") == nil {
+		pflag.CommandLine.DurationP("stepSend", "s", 5*time.Second, "Step duration for check/send worker")
+	}
 	pflag.Parse()
 	v := viper.New()
 	v.SetDefault("address", "localhost:8080")
 	v.SetDefault("protocol", "http")
+	v.SetDefault("path_tls", "certs/ca.crt")
+	v.SetDefault("send_interval", 5*time.Minute)
+	v.SetDefault("step_send", 5*time.Second)
 	v.SetEnvPrefix("client")
 	v.AutomaticEnv()
 	if err := v.BindPFlag("address", pflag.CommandLine.Lookup("address")); err != nil {
@@ -46,6 +62,15 @@ func (c *ConfigClient) Get() error {
 		return err
 	}
 	if err := v.BindPFlag("path_db", pflag.CommandLine.Lookup("pathDB")); err != nil {
+		return err
+	}
+	if err := v.BindPFlag("path_tls", pflag.CommandLine.Lookup("PathTLS")); err != nil {
+		return err
+	}
+	if err := v.BindPFlag("send_interval", pflag.CommandLine.Lookup("sendInterval")); err != nil {
+		return err
+	}
+	if err := v.BindPFlag("step_send", pflag.CommandLine.Lookup("stepSend")); err != nil {
 		return err
 	}
 	configFilePath := v.GetString("config_path")

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net"
 	"os/signal"
 	"syscall"
 
@@ -37,20 +36,15 @@ func main() {
 		logger.Log.Sugar().Fatalw("ошибка инициализации базы данных", "error", err)
 	}
 	notifier := sync.NewSyncNotifier()
-	jwtKey := "jwtsecrettoken"
-	srv := service.NewServerService(db, jwtKey, notifier)
+	srv := service.NewServerService(db, cfg.Token, notifier)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer stop()
 	g, gCtx := errgroup.WithContext(ctx)
 	if cfg.Protocol == "grpc" {
-		listener, err := net.Listen("tcp", cfg.Net.String())
-		if err != nil {
-			logger.Log.Sugar().Fatal("ошибка запуска listener для gRPC", err)
-		}
 		gServ := grpc.NewServer(grpc.UnaryInterceptor(handler.AuthInterceptor(srv)))
 		h := handler.NewGRPCHandler(srv, logger.Log.Sugar())
 		proto.RegisterSyncServiceServer(gServ, h)
-		serv := transport.NewGRPC(cfg.Net.String(), logger.Log.Sugar(), gServ, listener)
+		serv := transport.NewGRPC(cfg.Net.String(), logger.Log.Sugar(), gServ, cfg.PathTLSCert, cfg.PathTLSKey)
 		g.Go(func() error {
 			logger.Log.Sugar().Info("Сервер запущен по протоколу gRPC на ", cfg.Net.String())
 			return serv.Run()
@@ -73,7 +67,7 @@ func main() {
 			r.Post("/push", h.AuthMiddleware(h.PushHandler()))
 			r.Get("/event", h.AuthMiddleware(h.StreamHandler()))
 		})
-		serv := transport.New(cfg.Net.String(), logger.Log.Sugar(), r, ctx)
+		serv := transport.New(cfg.Net.String(), logger.Log.Sugar(), r, ctx, cfg.PathTLSCert, cfg.PathTLSKey)
 		g.Go(func() error {
 			logger.Log.Sugar().Info("Сервер запущен по протоколу HTTP/SSE на ", cfg.Net.String())
 			return serv.Run()

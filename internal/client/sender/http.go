@@ -30,13 +30,14 @@ type HTTPSender struct {
 }
 
 // NewHTTPSender создает экземпляр HTTPSender.
-func NewHTTPSender(cfg config.ConfigClient, l log, deviceID string) *HTTPSender {
+func NewHTTPSender(cfg config.ConfigClient, l log, deviceID, pathTLS string) *HTTPSender {
 	client := resty.New().
 		SetTimeout(time.Second * 10).
-		SetBaseURL("http://" + cfg.Net.String()).
+		SetBaseURL("https://" + cfg.Net.String()).
 		SetRetryCount(3).
 		SetRetryWaitTime(1 * time.Second).
-		SetRetryMaxWaitTime(5 * time.Second)
+		SetRetryMaxWaitTime(5 * time.Second).
+		SetRootCertificate(pathTLS)
 	client.AddRetryCondition(func(r *resty.Response, err error) bool {
 		if err != nil {
 			return true

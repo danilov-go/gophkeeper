@@ -15,12 +15,14 @@ type log interface {
 
 // Server определяет конфигурацию HTTP-сервера.
 type Server struct {
-	Server *http.Server
-	Logger log
+	Server      *http.Server
+	Logger      log
+	PathTLSCert string
+	PathTLSKey  string
 }
 
 // New создает новый экземпляр Server.
-func New(port string, l log, r http.Handler, ctx context.Context) *Server {
+func New(port string, l log, r http.Handler, ctx context.Context, pathCert, pathKey string) *Server {
 	server := &http.Server{
 		Addr:    port,
 		Handler: r,
@@ -29,15 +31,17 @@ func New(port string, l log, r http.Handler, ctx context.Context) *Server {
 		},
 	}
 	return &Server{
-		Server: server,
-		Logger: l,
+		Server:      server,
+		Logger:      l,
+		PathTLSCert: pathCert,
+		PathTLSKey:  pathKey,
 	}
 }
 
 // Run запускает HTTP-сервер.
 func (serv *Server) Run() error {
 	serv.Logger.Infow("HTTP server is starting", "address", serv.Server.Addr)
-	if err := serv.Server.ListenAndServe(); err != nil {
+	if err := serv.Server.ListenAndServeTLS(serv.PathTLSCert, serv.PathTLSKey); err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
