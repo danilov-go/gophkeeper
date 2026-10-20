@@ -29,3 +29,6 @@ internal/proto/*_grpc.pb.go
 *.db
 certs/*.key
 certs/*.csr
+*.crt binary
+*.key binary
+*.srl binary
