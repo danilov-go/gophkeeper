@@ -164,7 +164,7 @@ func (s *storageDB) GetUser(ctx context.Context, login string) (models.User, err
 	return user, nil
 }
 
-func (s *storageDB) Delete(ctx context.Context, userID, id int) error {
+func (s *storageDB) Delete(ctx context.Context, userID int, id string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

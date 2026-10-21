@@ -65,8 +65,8 @@ func (m *MemStorage) UpdateSecrets(ctx context.Context, userID int, changelogs m
 	for _, changelog := range changelogs {
 		secret := changelog.Secret
 		id := changelog.SecretID
-		serverSecret, exists := m.secrets[userID][id]
-		if !exists {
+		serverSecret, ok := m.secrets[userID][id]
+		if !ok {
 			m.secrets[userID][id] = secret
 		} else {
 			if secret.Version > serverSecret.Version {
