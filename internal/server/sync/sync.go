@@ -28,7 +28,7 @@ func NewSyncNotifier() *SyncNotifier {
 }
 
 func (n *SyncNotifier) Register(userID int, deviceID string) (<-chan models.SyncEvent, func()) {
-	stream := NewHTTPStream(deviceID, userID)
+	stream := NewStream(deviceID, userID)
 	n.observers.Store(deviceID, stream)
 	unsubscribe := func() {
 		n.observers.Delete(deviceID)
@@ -51,39 +51,39 @@ func (n *SyncNotifier) Notify(event models.SyncEvent) {
 		return true
 	})
 }
-func (c *HTTPStream) Close() {
+func (c *Stream) Close() {
 	close(c.ch)
 }
 
-type HTTPStream struct {
+type Stream struct {
 	deviceID string
 	userID   int
 	ch       chan models.SyncEvent
 }
 
-func NewHTTPStream(deviceID string, userID int) *HTTPStream {
-	return &HTTPStream{
+func NewStream(deviceID string, userID int) *Stream {
+	return &Stream{
 		deviceID: deviceID,
 		userID:   userID,
 		ch:       make(chan models.SyncEvent, 1),
 	}
 }
 
-func (c *HTTPStream) GetDeviceID() string {
+func (c *Stream) GetDeviceID() string {
 	return c.deviceID
 }
 
-func (c *HTTPStream) GetUserID() int {
+func (c *Stream) GetUserID() int {
 	return c.userID
 }
 
-func (c *HTTPStream) Update(event models.SyncEvent) {
+func (c *Stream) Update(event models.SyncEvent) {
 	select {
 	case c.ch <- event:
 	default:
 	}
 }
 
-func (c *HTTPStream) Stream() <-chan models.SyncEvent {
+func (c *Stream) Stream() <-chan models.SyncEvent {
 	return c.ch
 }
