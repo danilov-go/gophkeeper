@@ -78,7 +78,9 @@ func (h *Handler) PushHandler() LoginHandlerFunc {
 		}
 		deviceID := r.Header.Get("device-id")
 		if deviceID == "" {
-			deviceID = "unknown"
+			h.logger.Errorw("отсутствует device-id")
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
 		}
 		err = h.service.Push(ctx, user.ID, deviceID, changelogs)
 		if err != nil {
@@ -103,7 +105,9 @@ func (h *Handler) StreamHandler() LoginHandlerFunc {
 		}
 		deviceID := r.Header.Get("device-id")
 		if deviceID == "" {
-			deviceID = "unknown"
+			h.logger.Errorw("отсутствует device-id")
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
 		}
 		stream, close := h.service.Event(ctx, user.ID, deviceID)
 		defer close()

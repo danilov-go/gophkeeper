@@ -13,8 +13,8 @@ import (
 type LoginHandlerFunc func(w http.ResponseWriter, r *http.Request, user models.AuthUser)
 
 type loginPassword struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Login string `json:"login"`
+	Hash  string `json:"hash"`
 }
 
 func decode[T any](w http.ResponseWriter, r *http.Request) (T, error) {
@@ -68,14 +68,18 @@ func (h *Handler) LoginUser() http.HandlerFunc {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		if user.Login == "" || user.Password == "" {
+		if user.Login == "" || user.Hash == "" {
 			h.logger.Errorw("пустой логин или пароль", "login", user.Login)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
-		signedToken, salt, err := h.service.Login(ctx, user.Login, user.Password)
+		signedToken, salt, err := h.service.Login(ctx, user.Login, user.Hash)
 		if err != nil {
+			if errors.Is(err, models.ErrUserNotFound) {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
 			h.logger.Errorw("ошибка аутентификации", "error", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return

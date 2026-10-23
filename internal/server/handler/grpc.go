@@ -126,7 +126,7 @@ func (s *GRPCHandler) Stream(req *proto.StreamRequest, stream proto.SyncService_
 	}
 	deviceID := req.DeviceId
 	if deviceID == "" {
-		deviceID = "unknown"
+		return status.Error(codes.InvalidArgument, "deviceID не может быть пустым")
 	}
 	ch, unsubscribe := s.service.Event(stream.Context(), id, deviceID)
 	defer unsubscribe()

@@ -44,7 +44,7 @@ type User struct {
 
 type RegisterUser struct {
 	Login string `json:"login"`
-	Hash  string `json:"password"`
+	Hash  string `json:"hash"`
 	Salt  string `json:"salt"`
 }
 

@@ -11,6 +11,7 @@ type log interface {
 	Errorw(msg string, keysAndValues ...any)
 }
 
+//go:generate mockery --name=ServerService --output=./mocks --case=underscore
 type ServerService interface {
 	BuildJWTString(id int, login string) (string, error)
 	Register(ctx context.Context, login, clientHash, clientSalt string) (string, error)
