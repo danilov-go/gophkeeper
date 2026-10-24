@@ -29,7 +29,6 @@ func (m *MemStorage) SaveSecret(ctx context.Context, secret models.CipherData) (
 	m.secrets[secret.ID] = secret
 	m.changelog = append(m.changelog, models.Changelog{
 		ID:       m.nextLogID,
-		Action:   models.ActionCreate,
 		SecretID: secret.ID,
 		Secret:   secret,
 	})
@@ -94,7 +93,6 @@ func (m *MemStorage) UpdateSecret(ctx context.Context, secret models.CipherData)
 	m.secrets[secret.ID] = secret
 	m.changelog = append(m.changelog, models.Changelog{
 		ID:       m.nextLogID,
-		Action:   models.ActionUpdate,
 		SecretID: secret.ID,
 		Secret:   secret,
 	})
@@ -103,7 +101,7 @@ func (m *MemStorage) UpdateSecret(ctx context.Context, secret models.CipherData)
 }
 
 // DeleteSecret удаляет секрет по его ID.
-func (m *MemStorage) DeleteSecret(ctx context.Context, id string) error {
+func (m *MemStorage) DeleteSecret(ctx context.Context, id string, sync bool) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -116,15 +114,16 @@ func (m *MemStorage) DeleteSecret(ctx context.Context, id string) error {
 	if !ok {
 		return errors.New("данные отсутствуют в хранилище")
 	}
+	if !sync {
+		secret.Version++
+		secret.Deleted = true
+		m.changelog = append(m.changelog, models.Changelog{
+			ID:       m.nextLogID,
+			SecretID: secret.ID,
+			Secret:   secret,
+		})
+		m.nextLogID++
+	}
 	delete(m.secrets, id)
-	secret.Version++
-	secret.Deleted = true
-	m.changelog = append(m.changelog, models.Changelog{
-		ID:       m.nextLogID,
-		Action:   models.ActionDelete,
-		SecretID: secret.ID,
-		Secret:   secret,
-	})
-	m.nextLogID++
 	return nil
 }

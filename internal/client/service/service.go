@@ -16,7 +16,7 @@ type Storage interface {
 	GetSecret(ctx context.Context, id string) (models.CipherData, error)
 	GetAllSecret(ctx context.Context, sType models.SecretType) ([]models.CipherData, error)
 	UpdateSecret(ctx context.Context, secret models.CipherData) error
-	DeleteSecret(ctx context.Context, id string) error
+	DeleteSecret(ctx context.Context, id string, sync bool) error
 	SaveUser(ctx context.Context, login, hash, salt string) error
 	GetUser(ctx context.Context, login string) (models.LocalUser, error)
 	SyncUpdate(ctx context.Context, cipherData []models.CipherData) error
@@ -29,7 +29,7 @@ type Storage interface {
 }
 
 type Strategy interface {
-	Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
+	Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction
 }
 
 type Sender interface {

@@ -36,8 +36,8 @@ func (s *storageDB) SaveSecret(ctx context.Context, secret models.CipherData) (s
 	if err != nil {
 		return "", err
 	}
-	query = `INSERT INTO changelog (action, secret_id, secret_data) VALUES (?, ?, ?)`
-	_, err = tx.ExecContext(ctx, query, models.ActionCreate, secret.ID, string(cipherData))
+	query = `INSERT INTO changelog (secret_id, secret_data) VALUES (?, ?)`
+	_, err = tx.ExecContext(ctx, query, secret.ID, string(cipherData))
 	if err != nil {
 		return "", err
 	}
@@ -120,15 +120,15 @@ func (s *storageDB) UpdateSecret(ctx context.Context, secret models.CipherData) 
 	if err != nil {
 		return err
 	}
-	query = `INSERT INTO changelog (action, secret_id, secret_data) VALUES (?, ?, ?)`
-	_, err = tx.ExecContext(ctx, query, models.ActionUpdate, secret.ID, string(cipherData))
+	query = `INSERT INTO changelog (secret_id, secret_data) VALUES (?, ?)`
+	_, err = tx.ExecContext(ctx, query, secret.ID, string(cipherData))
 	if err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
-func (s *storageDB) DeleteSecret(ctx context.Context, id string) error {
+func (s *storageDB) DeleteSecret(ctx context.Context, id string, sync bool) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -137,8 +137,16 @@ func (s *storageDB) DeleteSecret(ctx context.Context, id string) error {
 		return err
 	}
 	defer tx.Rollback()
+	if sync {
+		query := `DELETE FROM secrets WHERE id = ?`
+		_, err = tx.ExecContext(ctx, query, id)
+		if err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
 	var secret models.CipherData
-	query := `SELECT id, type, cipher, version FROM secrets WHERE id = ? AND deleted = 0`
+	query := `SELECT id, type, cipher, version FROM secrets WHERE id = ?`
 	err = tx.QueryRowContext(ctx, query, id).
 		Scan(&secret.ID, &secret.Type, &secret.Cipher, &secret.Version)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -149,20 +157,21 @@ func (s *storageDB) DeleteSecret(ctx context.Context, id string) error {
 	}
 	secret.Version++
 	secret.Deleted = true
-	secret.UpdatedAt = time.Now()
-	query = `UPDATE secrets SET version = ?, deleted = 1, updated_at = ? WHERE id = ?`
-	_, err = tx.ExecContext(ctx, query, secret.Version, secret.UpdatedAt, id)
-	if err != nil {
-		return err
-	}
+	secret.UpdatedAt = time.Now().UTC()
 	cipherData, err := json.Marshal(secret)
 	if err != nil {
 		return err
 	}
-	query = `INSERT INTO changelog (action, secret_id, secret_data) VALUES (?, ?, ?)`
-	_, err = tx.ExecContext(ctx, query, models.ActionDelete, secret.ID, string(cipherData))
+	query = `INSERT INTO changelog (secret_id, secret_data) VALUES (?, ?)`
+	_, err = tx.ExecContext(ctx, query, secret.ID, string(cipherData))
 	if err != nil {
 		return err
 	}
+	query = `DELETE FROM secrets WHERE id = ?`
+	_, err = tx.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }

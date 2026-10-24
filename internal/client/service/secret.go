@@ -70,7 +70,7 @@ func (s *ClientService) Update(ctx context.Context, id string, meta models.MetaD
 
 // Delete удаляет секрет по его ID.
 func (s *ClientService) Delete(ctx context.Context, id string) error {
-	err := s.storage.DeleteSecret(ctx, id)
+	err := s.storage.DeleteSecret(ctx, id, false)
 	if err == nil {
 		s.trigger()
 	}

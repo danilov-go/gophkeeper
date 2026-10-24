@@ -17,7 +17,6 @@ message CipherData {
 
 message Changelog {
   int32 id = 1;
-  string action = 2;     
   string secret_id = 3;
   CipherData secret = 4; 
 }

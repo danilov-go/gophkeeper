@@ -9,7 +9,7 @@ import (
 )
 
 type Strategy interface {
-	Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
+	Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction
 }
 
 type MemStorage struct {
@@ -43,7 +43,7 @@ func (m *MemStorage) GetSecrets(ctx context.Context, userID int, v models.Secret
 	}
 	var cipherData []models.CipherData
 	for _, secret := range secrets {
-		if m.strategy.Rules(secret.ID, secret.Version, secret.UpdatedAt, v) != models.ActionSkip {
+		if m.strategy.Rules(secret.ID, secret.Version, secret.UpdatedAt, secret.Deleted, v) != models.ActionSkip {
 			cipherData = append(cipherData, secret)
 		}
 	}

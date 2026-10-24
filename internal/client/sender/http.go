@@ -218,11 +218,12 @@ func (s *HTTPSender) push(ctx context.Context, changelogs []models.Changelog, to
 }
 
 func (s *HTTPSender) Logout() {
+	s.mu.Lock()
 	s.token = ""
+	s.mu.Unlock()
 }
 
 func (s *HTTPSender) ServerEvent(ctx context.Context, runSync func()) {
-
 	go func() {
 		for {
 			if err := ctx.Err(); err != nil {

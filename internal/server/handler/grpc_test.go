@@ -156,7 +156,7 @@ func TestGRPCHandler_Push(t *testing.T) {
 	req := &proto.PushRequest{
 		DeviceId: deviceID,
 		Changelogs: []*proto.Changelog{
-			{Id: userID, Action: string(models.ActionCreate), SecretId: secretID, Secret: &proto.CipherData{Id: secretID, Version: 2}},
+			{Id: userID, SecretId: secretID, Secret: &proto.CipherData{Id: secretID, Version: 2}},
 		},
 	}
 	tests := []struct {

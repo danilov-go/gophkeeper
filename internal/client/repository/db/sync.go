@@ -35,7 +35,7 @@ func (s *storageDB) GetVersion(ctx context.Context) (map[string]models.VersionTi
 }
 
 func (s *storageDB) GetChangelog() ([]models.Changelog, error) {
-	query := `SELECT id, action, secret_id, secret_data FROM changelog`
+	query := `SELECT id, secret_id, secret_data FROM changelog`
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (s *storageDB) GetChangelog() ([]models.Changelog, error) {
 	for rows.Next() {
 		var log models.Changelog
 		var secretDataStr string
-		if err := rows.Scan(&log.ID, &log.Action, &log.SecretID, &secretDataStr); err != nil {
+		if err := rows.Scan(&log.ID, &log.SecretID, &secretDataStr); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(secretDataStr), &log.Secret); err != nil {

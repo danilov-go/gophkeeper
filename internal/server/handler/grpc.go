@@ -99,7 +99,6 @@ func (s *GRPCHandler) Push(ctx context.Context, req *proto.PushRequest) (*proto.
 		clientTime := time.Unix(log.Secret.UpdatedAt/1e9, log.Secret.UpdatedAt%1e9).UTC()
 		changelogs = append(changelogs, models.Changelog{
 			ID:       int(log.Id),
-			Action:   models.ActionType(log.Action),
 			SecretID: string(log.SecretId),
 			Secret: models.CipherData{
 				ID:        log.Secret.Id,

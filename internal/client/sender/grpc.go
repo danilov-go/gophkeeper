@@ -30,6 +30,7 @@ type GRPCSender struct {
 	mu       sync.RWMutex
 }
 
+//go:generate mockery --name=SyncServiceClient --dir=../../proto --output=../../proto --outpkg=proto --filename=/mocks/gophkeeper_mock.go --structname=MockSyncServiceClient
 func NewGRPCSender(serverAddr string, l log, deviceID, pathTLS string) (*GRPCSender, error) {
 	cert, err := os.ReadFile(pathTLS)
 	if err != nil {
@@ -139,7 +140,6 @@ func (s *GRPCSender) Sync(ctx context.Context, versions map[string]models.Versio
 			}
 			protoLogs = append(protoLogs, &proto.Changelog{
 				Id:       int32(log.ID),
-				Action:   string(log.Action),
 				SecretId: string(log.SecretID),
 				Secret:   cipherData,
 			})

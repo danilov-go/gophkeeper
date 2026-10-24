@@ -16,7 +16,7 @@ import (
 )
 
 type Strategy interface {
-	Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction
+	Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction
 }
 
 type storageDB struct {
@@ -72,7 +72,7 @@ func (s *storageDB) GetSecrets(ctx context.Context, userID int, v models.SecretV
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	query := `SELECT id, data, version, updated_at FROM secrets WHERE user_id = $1;`
+	query := `SELECT id, data, version, updated_at, deleted FROM secrets WHERE user_id = $1;`
 	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
@@ -84,10 +84,11 @@ func (s *storageDB) GetSecrets(ctx context.Context, userID int, v models.SecretV
 		var version int
 		var data []byte
 		var updatedAt time.Time
-		if err := rows.Scan(&id, &data, &version, &updatedAt); err != nil {
+		var deleted bool
+		if err := rows.Scan(&id, &data, &version, &updatedAt, &deleted); err != nil {
 			return nil, err
 		}
-		if s.strategy.Rules(id, version, updatedAt, v) != models.ActionSkip {
+		if s.strategy.Rules(id, version, updatedAt, deleted, v) != models.ActionSkip {
 			var secret models.CipherData
 			if err := json.Unmarshal(data, &secret); err != nil {
 				return nil, err

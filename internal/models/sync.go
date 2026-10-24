@@ -2,17 +2,17 @@ package models
 
 import "time"
 
-type ActionType string
+type SyncAction int
 
 const (
-	ActionCreate ActionType = "CREATE"
-	ActionUpdate ActionType = "UPDATE"
-	ActionDelete ActionType = "DELETE"
+	ActionSkip SyncAction = iota
+	ActionUpdate
+	ActionDelete
+	ActionConflict
 )
 
 type Changelog struct {
 	ID       int        `json:"id"`
-	Action   ActionType `json:"action"`
 	SecretID string     `json:"secret_id"`
 	Secret   CipherData `json:"secret"`
 }
@@ -30,14 +30,6 @@ type SyncEvent struct {
 	DeviceID string
 	Message  string
 }
-
-type SyncAction int
-
-const (
-	ActionSkip SyncAction = iota
-	ActionUpdateSecret
-	ActionConflict
-)
 
 type Conflict struct {
 	ID     string

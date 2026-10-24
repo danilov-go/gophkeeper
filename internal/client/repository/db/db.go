@@ -53,7 +53,6 @@ func (s *storageDB) createTable() error {
 		);`,
 		`CREATE TABLE IF NOT EXISTS changelog (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			action TEXT NOT NULL,
 			secret_id TEXT NOT NULL,
 			secret_data TEXT NOT NULL
 		);`,

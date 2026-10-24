@@ -12,17 +12,27 @@ func NewClientStrategy() ClientStrategy {
 	return ClientStrategy{}
 }
 
-func (s ClientStrategy) Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction {
-	localValue, ok := versions[id]
+func (s ClientStrategy) Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction {
+	v, ok := versions[id]
 	if !ok {
-		return models.ActionUpdateSecret
+		if deleted {
+			return models.ActionSkip
+		}
+		return models.ActionUpdate
 	}
-	if version > localValue.Version {
-		return models.ActionUpdateSecret
+	if version > v.Version {
+		if deleted {
+			return models.ActionDelete
+		}
+		return models.ActionUpdate
 	}
-	if version == localValue.Version && !updatedAt.Equal(localValue.UpdatedAt) {
+	if version == v.Version && !updatedAt.Equal(v.UpdatedAt) {
+		if deleted {
+			return models.ActionDelete
+		}
 		return models.ActionConflict
 	}
+
 	return models.ActionSkip
 }
 
@@ -32,15 +42,24 @@ func NewServerStrategy() ServerStrategy {
 	return ServerStrategy{}
 }
 
-func (s ServerStrategy) Rules(id string, version int, updatedAt time.Time, versions models.SecretVersions) models.SyncAction {
+func (s ServerStrategy) Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction {
 	v, ok := versions[id]
 	if !ok {
-		return models.ActionUpdateSecret
+		if deleted {
+			return models.ActionDelete
+		}
+		return models.ActionUpdate
 	}
 	if version > v.Version {
-		return models.ActionUpdateSecret
+		if deleted {
+			return models.ActionDelete
+		}
+		return models.ActionUpdate
 	}
 	if version == v.Version && !updatedAt.Equal(v.UpdatedAt) {
+		if deleted {
+			return models.ActionDelete
+		}
 		return models.ActionConflict
 	}
 	return models.ActionSkip

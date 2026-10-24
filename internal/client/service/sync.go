@@ -24,11 +24,13 @@ func (s *ClientService) SyncData(ctx context.Context) error {
 	}
 	var updateSecrets []models.CipherData
 	for _, secret := range cipherData {
-		switch s.strategy.Rules(secret.ID, secret.Version, secret.UpdatedAt, localVersions) {
+		switch s.strategy.Rules(secret.ID, secret.Version, secret.UpdatedAt, secret.Deleted, localVersions) {
 		case models.ActionConflict:
 			_ = s.storage.SaveConflict(ctx, secret)
-		case models.ActionUpdateSecret:
+		case models.ActionUpdate:
 			updateSecrets = append(updateSecrets, secret)
+		case models.ActionDelete:
+			_ = s.storage.DeleteSecret(ctx, secret.ID, true)
 		case models.ActionSkip:
 			continue
 		}

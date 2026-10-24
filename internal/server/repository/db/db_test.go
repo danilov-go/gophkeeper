@@ -134,7 +134,7 @@ func TestStorageDB_GetUser(t *testing.T) {
 }
 
 func TestStorageDB_GetSecrets(t *testing.T) {
-	query := `SELECT id, data, version, updated_at FROM secrets WHERE user_id = $1;`
+	query := `SELECT id, data, version, updated_at, deleted FROM secrets WHERE user_id = $1;`
 	now := time.Now().Truncate(time.Millisecond)
 	secret := models.CipherData{ID: secretID1, Version: 1, UpdatedAt: now}
 	secretBytes, err := json.Marshal(secret)
@@ -150,8 +150,8 @@ func TestStorageDB_GetSecrets(t *testing.T) {
 			name:   "положительный тест",
 			userID: userID,
 			setupMock: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"id", "data", "version", "updated_at"}).
-					AddRow(secretID1, secretBytes, 1, now)
+				rows := sqlmock.NewRows([]string{"id", "data", "version", "updated_at", "deleted"}).
+					AddRow(secretID1, secretBytes, 1, now, false)
 				mock.ExpectQuery(query).WithArgs(userID).WillReturnRows(rows)
 			},
 			wantSecrets: []models.CipherData{secret},
@@ -161,7 +161,7 @@ func TestStorageDB_GetSecrets(t *testing.T) {
 			name:   "секреты отсутствуют",
 			userID: userID,
 			setupMock: func(mock sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"id", "data", "version", "updated_at"})
+				rows := sqlmock.NewRows([]string{"id", "data", "version", "updated_at", "deleted"})
 				mock.ExpectQuery(query).WithArgs(userID).WillReturnRows(rows)
 			},
 			wantSecrets: nil,

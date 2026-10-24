@@ -28,7 +28,7 @@ func TestClientStrategy_Rules(t *testing.T) {
 			version:        1,
 			updatedAt:      now,
 			secretVersions: models.SecretVersions{},
-			wantAction:     models.ActionUpdateSecret,
+			wantAction:     models.ActionUpdate,
 		},
 		{
 			name:      "версия сервера новее клиентской",
@@ -38,7 +38,7 @@ func TestClientStrategy_Rules(t *testing.T) {
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 3, UpdatedAt: now},
 			},
-			wantAction: models.ActionUpdateSecret,
+			wantAction: models.ActionUpdate,
 		},
 		{
 			name:      "версии равны, но время отличается",
@@ -74,7 +74,7 @@ func TestClientStrategy_Rules(t *testing.T) {
 	s := NewClientStrategy()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			action := s.Rules(tt.id, tt.version, tt.updatedAt, tt.secretVersions)
+			action := s.Rules(tt.id, tt.version, tt.updatedAt, false, tt.secretVersions)
 			assert.Equal(t, tt.wantAction, action)
 		})
 	}
@@ -98,7 +98,7 @@ func TestServerStrategy_Rules(t *testing.T) {
 			version:        1,
 			updatedAt:      now,
 			secretVersions: models.SecretVersions{},
-			wantAction:     models.ActionUpdateSecret,
+			wantAction:     models.ActionUpdate,
 		},
 		{
 			name:      "версия клиента новее серверной",
@@ -108,7 +108,7 @@ func TestServerStrategy_Rules(t *testing.T) {
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 1, UpdatedAt: now},
 			},
-			wantAction: models.ActionUpdateSecret,
+			wantAction: models.ActionUpdate,
 		},
 		{
 			name:      "версии равны, но время отличается",
@@ -144,7 +144,7 @@ func TestServerStrategy_Rules(t *testing.T) {
 	s := NewServerStrategy()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			action := s.Rules(tt.id, tt.version, tt.updatedAt, tt.secretVersions)
+			action := s.Rules(tt.id, tt.version, tt.updatedAt, false, tt.secretVersions)
 			assert.Equal(t, tt.wantAction, action)
 		})
 	}
