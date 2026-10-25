@@ -157,7 +157,7 @@ func (s *storageDB) DeleteSecret(ctx context.Context, id string, sync bool) erro
 	}
 	secret.Version++
 	secret.Deleted = true
-	secret.UpdatedAt = time.Now().UTC()
+	secret.UpdatedAt = time.Now()
 	cipherData, err := json.Marshal(secret)
 	if err != nil {
 		return err
@@ -172,6 +172,5 @@ func (s *storageDB) DeleteSecret(ctx context.Context, id string, sync bool) erro
 	if err != nil {
 		return err
 	}
-
 	return tx.Commit()
 }

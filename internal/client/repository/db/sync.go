@@ -44,11 +44,11 @@ func (s *storageDB) GetChangelog() ([]models.Changelog, error) {
 	var changelog []models.Changelog
 	for rows.Next() {
 		var log models.Changelog
-		var secretDataStr string
-		if err := rows.Scan(&log.ID, &log.SecretID, &secretDataStr); err != nil {
+		var secretData string
+		if err := rows.Scan(&log.ID, &log.SecretID, &secretData); err != nil {
 			return nil, err
 		}
-		if err := json.Unmarshal([]byte(secretDataStr), &log.Secret); err != nil {
+		if err := json.Unmarshal([]byte(secretData), &log.Secret); err != nil {
 			return nil, err
 		}
 		changelog = append(changelog, log)

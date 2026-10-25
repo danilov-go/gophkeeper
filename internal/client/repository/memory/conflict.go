@@ -22,12 +22,11 @@ func (m *MemStorage) GetConflicts(ctx context.Context) ([]models.CipherData, err
 	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
-	var list []models.CipherData
+	var secrets []models.CipherData
 	for _, secret := range m.conflicts {
-		list = append(list, secret)
+		secrets = append(secrets, secret)
 	}
-	return list, nil
+	return secrets, nil
 }
 
 func (m *MemStorage) DeleteConflict(ctx context.Context, id string) error {
