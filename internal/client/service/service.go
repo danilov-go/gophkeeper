@@ -11,6 +11,8 @@ import (
 )
 
 // Storage определяет методы для взаимодействия с хранилищем.
+//
+//go:generate mockery --name=Storage --case=underscore --output=./mocks
 type Storage interface {
 	SaveSecret(ctx context.Context, secret models.CipherData) (string, error)
 	GetSecret(ctx context.Context, id string) (models.CipherData, error)
@@ -28,10 +30,12 @@ type Storage interface {
 	DeleteConflict(ctx context.Context, id string) error
 }
 
+//go:generate mockery --name=Sender --case=underscore --output=./mocks
 type Strategy interface {
 	Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction
 }
 
+//go:generate mockery --name=Strategy --case=underscore --output=./mocks
 type Sender interface {
 	Register(ctx context.Context, login, hash, salt string) error
 	Auth(ctx context.Context, login, hash string) error
