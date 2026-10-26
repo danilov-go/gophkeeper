@@ -27,7 +27,7 @@ func InitDB(path string) (*storageDB, error) {
 	}
 	db.SetMaxOpenConns(1)
 	s := &storageDB{db: db}
-	if err := s.createTable(); err != nil {
+	if err := s.СreateTable(); err != nil {
 		if closeErr := db.Close(); closeErr != nil {
 			return nil, errors.Join(err, closeErr)
 		}
@@ -36,7 +36,7 @@ func InitDB(path string) (*storageDB, error) {
 	return s, nil
 }
 
-func (s *storageDB) createTable() error {
+func (s *storageDB) СreateTable() error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS users (
 			login TEXT PRIMARY KEY,

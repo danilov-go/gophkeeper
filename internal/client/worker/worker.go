@@ -34,21 +34,18 @@ func NewSyncWorker(syncer Syncer, l Logger, interval time.Duration, cooldown tim
 }
 
 func (w *SyncWorker) Run(ctx context.Context) {
-	ticker := time.NewTicker(w.interval)
-	defer ticker.Stop()
+	timer := time.NewTimer(w.interval)
+	defer timer.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-timer.C:
 			w.runSync(ctx)
+			timer.Reset(w.interval)
 		case <-w.syncCh:
 			w.runSync(ctx)
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(w.cooldown):
-			}
+			timer.Reset(w.cooldown)
 		}
 	}
 }
