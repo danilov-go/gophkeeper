@@ -19,6 +19,7 @@ func TestClientStrategy_Rules(t *testing.T) {
 		id             string
 		version        int
 		updatedAt      time.Time
+		deleted        bool
 		secretVersions models.SecretVersions
 		wantAction     models.SyncAction
 	}{
@@ -27,6 +28,7 @@ func TestClientStrategy_Rules(t *testing.T) {
 			id:             secretID,
 			version:        1,
 			updatedAt:      now,
+			deleted:        false,
 			secretVersions: models.SecretVersions{},
 			wantAction:     models.ActionUpdate,
 		},
@@ -35,6 +37,7 @@ func TestClientStrategy_Rules(t *testing.T) {
 			id:        secretID,
 			version:   5,
 			updatedAt: now,
+			deleted:   false,
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 3, UpdatedAt: now},
 			},
@@ -45,6 +48,7 @@ func TestClientStrategy_Rules(t *testing.T) {
 			id:        secretID,
 			version:   2,
 			updatedAt: future,
+			deleted:   false,
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 2, UpdatedAt: now},
 			},
@@ -55,6 +59,7 @@ func TestClientStrategy_Rules(t *testing.T) {
 			id:        secretID,
 			version:   2,
 			updatedAt: now,
+			deleted:   false,
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 2, UpdatedAt: now},
 			},
@@ -65,16 +70,48 @@ func TestClientStrategy_Rules(t *testing.T) {
 			id:        secretID,
 			version:   1,
 			updatedAt: past,
+			deleted:   false,
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 2, UpdatedAt: now},
 			},
 			wantAction: models.ActionSkip,
 		},
+		{
+			name:           "секрет отсутствует у клиента и помечен удаленным на сервере",
+			id:             secretID,
+			version:        1,
+			updatedAt:      now,
+			deleted:        true,
+			secretVersions: models.SecretVersions{},
+			wantAction:     models.ActionSkip,
+		},
+		{
+			name:      "версия сервера новее клиентской и секрет удален",
+			id:        secretID,
+			version:   5,
+			updatedAt: now,
+			deleted:   true,
+			secretVersions: models.SecretVersions{
+				secretID: models.VersionTime{Version: 3, UpdatedAt: now},
+			},
+			wantAction: models.ActionDelete,
+		},
+		{
+			name:      "версии равны, время отличается и секрет удален на сервере",
+			id:        secretID,
+			version:   2,
+			updatedAt: future,
+			deleted:   true,
+			secretVersions: models.SecretVersions{
+				secretID: models.VersionTime{Version: 2, UpdatedAt: now},
+			},
+			wantAction: models.ActionDelete,
+		},
 	}
 	s := NewClientStrategy()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			action := s.Rules(tt.id, tt.version, tt.updatedAt, false, tt.secretVersions)
+			action := s.Rules(tt.id, tt.version, tt.updatedAt, tt.deleted, tt.secretVersions)
 			assert.Equal(t, tt.wantAction, action)
 		})
 	}
@@ -89,6 +126,7 @@ func TestServerStrategy_Rules(t *testing.T) {
 		id             string
 		version        int
 		updatedAt      time.Time
+		deleted        bool
 		secretVersions models.SecretVersions
 		wantAction     models.SyncAction
 	}{
@@ -97,6 +135,7 @@ func TestServerStrategy_Rules(t *testing.T) {
 			id:             secretID,
 			version:        1,
 			updatedAt:      now,
+			deleted:        false,
 			secretVersions: models.SecretVersions{},
 			wantAction:     models.ActionUpdate,
 		},
@@ -105,6 +144,7 @@ func TestServerStrategy_Rules(t *testing.T) {
 			id:        secretID,
 			version:   3,
 			updatedAt: now,
+			deleted:   false,
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 1, UpdatedAt: now},
 			},
@@ -115,6 +155,7 @@ func TestServerStrategy_Rules(t *testing.T) {
 			id:        secretID,
 			version:   1,
 			updatedAt: future,
+			deleted:   false,
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 1, UpdatedAt: now},
 			},
@@ -125,6 +166,7 @@ func TestServerStrategy_Rules(t *testing.T) {
 			id:        secretID,
 			version:   1,
 			updatedAt: now,
+			deleted:   false,
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 1, UpdatedAt: now},
 			},
@@ -135,16 +177,48 @@ func TestServerStrategy_Rules(t *testing.T) {
 			id:        secretID,
 			version:   1,
 			updatedAt: past,
+			deleted:   false,
 			secretVersions: models.SecretVersions{
 				secretID: models.VersionTime{Version: 2, UpdatedAt: now},
 			},
 			wantAction: models.ActionSkip,
 		},
+		{
+			name:           "секрет отсутствует на сервере и удален клиентом",
+			id:             secretID,
+			version:        1,
+			updatedAt:      now,
+			deleted:        true,
+			secretVersions: models.SecretVersions{},
+			wantAction:     models.ActionDelete,
+		},
+		{
+			name:      "версия клиента новее серверной и секрет удален клиентом",
+			id:        secretID,
+			version:   3,
+			updatedAt: now,
+			deleted:   true,
+			secretVersions: models.SecretVersions{
+				secretID: models.VersionTime{Version: 1, UpdatedAt: now},
+			},
+			wantAction: models.ActionDelete,
+		},
+		{
+			name:      "версии равны, время отличается и секрет удален клиентом",
+			id:        secretID,
+			version:   1,
+			updatedAt: future,
+			deleted:   true,
+			secretVersions: models.SecretVersions{
+				secretID: models.VersionTime{Version: 1, UpdatedAt: now},
+			},
+			wantAction: models.ActionDelete,
+		},
 	}
 	s := NewServerStrategy()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			action := s.Rules(tt.id, tt.version, tt.updatedAt, false, tt.secretVersions)
+			action := s.Rules(tt.id, tt.version, tt.updatedAt, tt.deleted, tt.secretVersions)
 			assert.Equal(t, tt.wantAction, action)
 		})
 	}
