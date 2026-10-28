@@ -87,6 +87,7 @@ func (c *ConfigClient) Get() error {
 	}
 	err := v.Unmarshal(c, viper.DecodeHook(
 		mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
 			mapstructure.TextUnmarshallerHookFunc(),
 		),
 	))

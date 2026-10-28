@@ -70,6 +70,9 @@ func (c *ConfigServer) Get() error {
 	if err := v.BindPFlag("path_tls_key", pflag.CommandLine.Lookup("pathTLSKey")); err != nil {
 		return err
 	}
+	if err := v.BindPFlag("token", pflag.CommandLine.Lookup("token")); err != nil {
+		return err
+	}
 	configFilePath := v.GetString("config_path")
 	if configFilePath != "" {
 		if _, err := os.Stat(configFilePath); err == nil {
