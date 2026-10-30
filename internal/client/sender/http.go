@@ -20,6 +20,9 @@ import (
 
 type log interface {
 	Errorw(msg string, keysAndValues ...any)
+	Warnf(template string, args ...interface{})
+	Errorf(template string, args ...interface{})
+	Debugf(template string, args ...interface{})
 }
 
 type HTTPSender struct {
@@ -50,6 +53,7 @@ func NewHTTPSender(cfg config.ConfigClient, l log, deviceID, pathTLS string) *HT
 		}
 		return false
 	})
+	client.SetLogger(l)
 	client.OnBeforeRequest(gzipClient)
 	transport, _ := client.GetClient().Transport.(*http.Transport)
 	sseClient := &http.Client{

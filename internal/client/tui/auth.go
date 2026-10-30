@@ -12,11 +12,13 @@ type AuthMenuModel struct {
 	options        []string
 	isRegistration bool
 	chosen         bool
+	bulder         Bulder
 }
 
-func NewAuthMenuModel() AuthMenuModel {
+func NewAuthMenuModel(bulder Bulder) AuthMenuModel {
 	return AuthMenuModel{
 		options: []string{"Войти в аккаунт", "Зарегистрироваться"},
+		bulder:  bulder,
 	}
 }
 
@@ -54,5 +56,6 @@ func (m AuthMenuModel) View() string {
 		}
 		s.WriteString(fmt.Sprintf("%s %s\n", cursor, option))
 	}
+	s.WriteString("\n" + "Версия: " + m.bulder.Version + " " + "Дата: " + m.bulder.Date)
 	return s.String()
 }

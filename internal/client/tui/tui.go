@@ -9,6 +9,7 @@ import (
 
 type SyncOccurrenceMsg struct{}
 
+//go:generate mockery --name=SecretService --case=underscore --output=./mocks --with-expecter
 type SecretService interface {
 	Register(ctx context.Context, login, password string) error
 	Login(ctx context.Context, login, password string) error
@@ -46,17 +47,25 @@ type AppModel struct {
 	list           ListModel
 	form           FormModel
 	conflict       ConflictModel
+	bulder         Bulder
 }
 
-func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrenceChan <-chan struct{}) AppModel {
+type Bulder struct {
+	Version string
+	Date    string
+	Commit  string
+}
+
+func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrenceChan <-chan struct{}, bulder Bulder) AppModel {
 	return AppModel{
 		state:          authState,
 		service:        storage,
 		syncChan:       syncChan,
 		occurrenceChan: occurrenceChan,
-		authMenu:       NewAuthMenuModel(),
+		authMenu:       NewAuthMenuModel(bulder),
 		list:           NewListModel(storage, models.SecretType("")),
 		conflict:       NewConflictModel(storage),
+		bulder:         bulder,
 	}
 }
 
@@ -131,7 +140,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if keyMsg.String() == "q" {
 				m.service.Logout()
 				m.state = authState
-				m.authMenu = NewAuthMenuModel()
+				m.authMenu = NewAuthMenuModel(m.bulder)
 				return m, m.authMenu.Init()
 			}
 			if keyMsg.String() == "c" {
@@ -140,7 +149,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.conflict.Init()
 			}
 		}
-
 		updatedMenu, menuCmd := m.menu.Update(msg)
 		m.menu = updatedMenu.(MenuModel)
 		if m.menu.chosen {

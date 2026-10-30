@@ -18,6 +18,12 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/strategy"
 )
 
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
+)
+
 func main() {
 	if err := logger.Initialize("info"); err != nil {
 		panic(err)
@@ -59,7 +65,12 @@ func main() {
 			}
 		})
 	}()
-	appModel := tui.NewAppModel(srvc, syncChan, syncWorker.Occurrence())
+	bulder := tui.Bulder{
+		Version: buildVersion,
+		Date:    buildDate,
+		Commit:  buildCommit,
+	}
+	appModel := tui.NewAppModel(srvc, syncChan, syncWorker.Occurrence(), bulder)
 	p := tea.NewProgram(appModel)
 	if _, err := p.Run(); err != nil {
 		logger.Log.Sugar().Fatalw("ошибка интерфейса", "error", err)

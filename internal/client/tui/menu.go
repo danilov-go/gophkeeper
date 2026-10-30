@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
@@ -16,6 +17,7 @@ type MenuModel struct {
 	options []MenuOption
 	cursor  int
 	chosen  bool
+	help    help.Model
 }
 
 func NewMenuModel() MenuModel {
@@ -26,6 +28,7 @@ func NewMenuModel() MenuModel {
 			{title: "Текстовые данные", sType: models.TypeText},
 			{title: "Бинарники", sType: models.TypeBinary},
 		},
+		help: help.New(),
 	}
 }
 
@@ -63,5 +66,8 @@ func (m MenuModel) View() string {
 		}
 		s.WriteString(cursor + " " + option.title + "\n")
 	}
+	menuKeys := keys
+	menuKeys.mode = modeMenu
+	s.WriteString("\n" + m.help.View(menuKeys) + "\n")
 	return s.String()
 }

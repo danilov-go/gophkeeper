@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
@@ -14,11 +16,13 @@ type ConflictModel struct {
 	conflicts []models.Conflict
 	cursor    int
 	err       error
+	help      help.Model
 }
 
 func NewConflictModel(srv SecretService) ConflictModel {
 	return ConflictModel{
 		service: srv,
+		help:    help.New(),
 	}
 }
 
@@ -96,12 +100,13 @@ func (m ConflictModel) View() string {
 				localForm.inputs[idx].Blur()
 			}
 			b.WriteString(" Версия сервера \n")
-			b.WriteString(fmt.Sprintf("Данные: %v \n", c.Server.Data))
 			b.WriteString(serverForm.View() + "\n")
 			b.WriteString(" Локальная версия\n")
-			b.WriteString(fmt.Sprintf("Данные: %v \n", c.Local.Data))
 			b.WriteString(localForm.View() + "\n")
 		}
 	}
+	conflictKeys := keys
+	conflictKeys.mode = modeConflict
+	b.WriteString("\n" + m.help.View(conflictKeys) + "\n")
 	return b.String()
 }
