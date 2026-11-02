@@ -48,7 +48,7 @@ func TestMemStorage_SaveUser(t *testing.T) {
 		},
 	}
 	strategy := strategy.NewServerStrategy()
-	storage := memory.InitMemStorage(strategy)
+	storage := memory.NewMemStorage(strategy)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, err := storage.SaveUser(t.Context(), tt.login, tt.hash, tt.salt)
@@ -89,7 +89,7 @@ func TestMemStorage_GetUser(t *testing.T) {
 		},
 	}
 	strategy := strategy.NewServerStrategy()
-	storage := memory.InitMemStorage(strategy)
+	storage := memory.NewMemStorage(strategy)
 	_, err := storage.SaveUser(t.Context(), expLogin, expHash, expSalt)
 	assert.NoError(t, err)
 	for _, tt := range tests {
@@ -141,7 +141,7 @@ func TestMemStorage_GetSecrets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			realStrategy := strategy.NewServerStrategy()
-			storage := memory.InitMemStorage(realStrategy)
+			storage := memory.NewMemStorage(realStrategy)
 			ctx := t.Context()
 			changelogs := models.Changelogs{
 				{SecretID: secretID1, Secret: secret1},
@@ -215,7 +215,7 @@ func TestMemStorage_UpdateSecrets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			strategy := strategy.NewServerStrategy()
-			storage := memory.InitMemStorage(strategy)
+			storage := memory.NewMemStorage(strategy)
 			ctx := t.Context()
 			if tt.configStorage != nil {
 				err := storage.UpdateSecrets(ctx, userID, tt.configStorage)

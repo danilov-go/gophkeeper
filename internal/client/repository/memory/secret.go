@@ -100,7 +100,7 @@ func (m *MemStorage) UpdateSecret(ctx context.Context, secret models.CipherData)
 	return nil
 }
 
-// DeleteSecret удаляет секрет по его ID.
+// DeleteSecret удаляет секрет из базы данных и добавляет запись в журнал изменений.
 func (m *MemStorage) DeleteSecret(ctx context.Context, id string, sync bool) error {
 	if err := ctx.Err(); err != nil {
 		return err

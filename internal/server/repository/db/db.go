@@ -15,6 +15,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// Strategy определяет интерфейс для проверки правил синхронизации.
 type Strategy interface {
 	Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction
 }
@@ -68,6 +69,7 @@ func InitDB(ps string, strategy Strategy) (*storageDB, error) {
 	}, nil
 }
 
+// GetSecrets возвращает измененные секреты пользователя, отфильтрованные через стратегию правил.
 func (s *storageDB) GetSecrets(ctx context.Context, userID int, v models.SecretVersions) ([]models.CipherData, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -102,6 +104,7 @@ func (s *storageDB) GetSecrets(ctx context.Context, userID int, v models.SecretV
 	return cipherData, nil
 }
 
+// UpdateSecrets сохраняет изменения секретов, если версия клиента выше версии сервера.
 func (s *storageDB) UpdateSecrets(ctx context.Context, userID int, changelogs models.Changelogs) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -136,6 +139,7 @@ func (s *storageDB) UpdateSecrets(ctx context.Context, userID int, changelogs mo
 	return tx.Commit()
 }
 
+// SaveUser сохраняет нового пользователя.
 func (s *storageDB) SaveUser(ctx context.Context, login, hash, salt string) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
@@ -149,6 +153,7 @@ func (s *storageDB) SaveUser(ctx context.Context, login, hash, salt string) (int
 	return userID, nil
 }
 
+// GetUser возвращает данные пользователя.
 func (s *storageDB) GetUser(ctx context.Context, login string) (models.User, error) {
 	if err := ctx.Err(); err != nil {
 		return models.User{}, err
@@ -163,16 +168,4 @@ func (s *storageDB) GetUser(ctx context.Context, login string) (models.User, err
 		return models.User{}, err
 	}
 	return user, nil
-}
-
-func (s *storageDB) Delete(ctx context.Context, userID int, id string) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	query := `
-		UPDATE secrets 
-		SET deleted = TRUE, version = version + 1, updated_at = $1 
-		WHERE user_id = $2 AND id = $3;`
-	_, err := s.db.ExecContext(ctx, query, time.Now(), userID, id)
-	return err
 }

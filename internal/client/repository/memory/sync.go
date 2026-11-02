@@ -7,6 +7,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// GetVersion возвращает версии и время обновления всех секретов.
 func (m *MemStorage) GetVersion(ctx context.Context) (map[string]models.VersionTime, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -26,6 +27,7 @@ func (m *MemStorage) GetVersion(ctx context.Context) (map[string]models.VersionT
 	return versions, nil
 }
 
+// GetChangelog возвращает все записи из журнала изменений.
 func (m *MemStorage) GetChangelog() ([]models.Changelog, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -37,6 +39,7 @@ func (m *MemStorage) GetChangelog() ([]models.Changelog, error) {
 	return changelogCopy, nil
 }
 
+// DeleteChangelog удаляет обработанные записи журнала изменений до указанного ID.
 func (m *MemStorage) DeleteChangelog(id int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -54,6 +57,7 @@ func (m *MemStorage) DeleteChangelog(id int) error {
 	return nil
 }
 
+// SyncUpdate сохраняет или обновляет полученные с сервера секреты.
 func (m *MemStorage) SyncUpdate(ctx context.Context, cipherData []models.CipherData) error {
 	if err := ctx.Err(); err != nil {
 		return err

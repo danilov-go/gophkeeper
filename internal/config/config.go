@@ -23,7 +23,7 @@ func (n *NetAddress) UnmarshalText(adr []byte) error {
 	return n.Set(string(adr))
 }
 
-// Set парсит строку в формате host:port и валидирует ее для пакета flag.
+// Set парсит строку в формате host:port и валидирует ее.
 func (n *NetAddress) Set(s string) error {
 	hp := strings.Split(s, ":")
 	if len(hp) != 2 {

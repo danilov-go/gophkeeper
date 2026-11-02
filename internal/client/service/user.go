@@ -10,6 +10,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// Register выполняет регистрацию нового пользователя в системе.
 func (s *ClientService) Register(ctx context.Context, login, password string) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -38,6 +39,7 @@ func (s *ClientService) Register(ctx context.Context, login, password string) er
 	return nil
 }
 
+// Login выполняет аутентификацию пользователя.
 func (s *ClientService) Login(ctx context.Context, login, password string) error {
 	var offline bool
 	var salt string

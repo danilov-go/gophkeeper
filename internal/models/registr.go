@@ -36,23 +36,36 @@ var (
 
 // User содержит данные о пользователе.
 type User struct {
-	ID    int
+	// ID содержит уникальный идентификатор пользователя.
+	ID int
+	// Login содержит логин пользователя.
 	Login string
-	Hash  string
-	Salt  string
+	// Hash содержит хеш пароля.
+	Hash string
+	// Salt содержит соль для хеширования.
+	Salt string
 }
 
+// RegisterUser содержит данные для регистрации нового пользователя.
 type RegisterUser struct {
+	// Login содержит логин пользователя.
 	Login string `json:"login"`
-	Hash  string `json:"hash"`
-	Salt  string `json:"salt"`
-}
-
-type AuthSalt struct {
+	// Hash содержит хеш пароля.
+	Hash string `json:"hash"`
+	// Salt содержит соль.
 	Salt string `json:"salt"`
 }
 
+// AuthSalt содержит соль пользователя при аутентификации.
+type AuthSalt struct {
+	// Salt содержит соль.
+	Salt string `json:"salt"`
+}
+
+// LocalUser содержит локальные данные авторизации пользователя.
 type LocalUser struct {
+	// Hash содержит хеш пароля.
 	Hash string
+	// Salt содержит соль.
 	Salt string
 }

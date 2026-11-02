@@ -78,7 +78,7 @@ func (s *ClientService) Delete(ctx context.Context, id string) error {
 
 }
 
-// GetAll возвращает список расшифрованных данных.
+// GetAll возвращает список расшифрованных данных переданного типа.
 func (s *ClientService) GetAll(ctx context.Context, sType models.SecretType) ([]models.Secret, error) {
 	cipherData, err := s.storage.GetAllSecret(ctx, sType)
 	if err != nil {
@@ -102,6 +102,7 @@ func (s *ClientService) GetAll(ctx context.Context, sType models.SecretType) ([]
 	return data, nil
 }
 
+// Get возвращает расшифрованный секрет по его ID.
 func (s *ClientService) Get(ctx context.Context, id string) (models.Secret, error) {
 	var data models.Secret
 	cipherData, err := s.storage.GetSecret(ctx, id)

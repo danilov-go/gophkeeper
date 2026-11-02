@@ -6,6 +6,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// SyncData выполняет синхронизацию данных клиента с сервером.
 func (s *ClientService) SyncData(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err

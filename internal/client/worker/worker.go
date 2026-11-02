@@ -1,3 +1,4 @@
+// Package worker предоставляет фоновый воркер для периодической и принудительной синхронизации данных.
 package worker
 
 import (
@@ -5,24 +6,27 @@ import (
 	"time"
 )
 
+// Syncer содержит метод для запуска процесса синхронизации данных.
 type Syncer interface {
 	SyncData(ctx context.Context) error
 }
 
-type Logger interface {
+type log interface {
 	Errorw(msg string, keysAndValues ...interface{})
 }
 
+// SyncWorker описывает воркер синхронизации.
 type SyncWorker struct {
 	syncer     Syncer
-	logger     Logger
+	logger     log
 	interval   time.Duration
 	cooldown   time.Duration
 	syncCh     <-chan struct{}
 	occurrence chan struct{}
 }
 
-func NewSyncWorker(syncer Syncer, l Logger, interval time.Duration, cooldown time.Duration, syncCh <-chan struct{}) *SyncWorker {
+// NewSyncWorker создает новый экземпляр SyncWorker.
+func NewSyncWorker(syncer Syncer, l log, interval time.Duration, cooldown time.Duration, syncCh <-chan struct{}) *SyncWorker {
 	return &SyncWorker{
 		syncer:     syncer,
 		logger:     l,
@@ -33,6 +37,7 @@ func NewSyncWorker(syncer Syncer, l Logger, interval time.Duration, cooldown tim
 	}
 }
 
+// Run запускает воркер синхронизации.
 func (w *SyncWorker) Run(ctx context.Context) {
 	timer := time.NewTimer(w.interval)
 	defer timer.Stop()
@@ -63,6 +68,7 @@ func (w *SyncWorker) runSync(ctx context.Context) {
 	}
 }
 
+// Occurrence возвращает канал для отслеживания фактов успешной синхронизации данных.
 func (w *SyncWorker) Occurrence() <-chan struct{} {
 	return w.occurrence
 }

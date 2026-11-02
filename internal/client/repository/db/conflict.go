@@ -6,6 +6,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// SaveConflict сохраняет или обновляет информацию о конфликтующем секрете.
 func (s *storageDB) SaveConflict(ctx context.Context, secret models.CipherData) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -19,6 +20,7 @@ func (s *storageDB) SaveConflict(ctx context.Context, secret models.CipherData) 
 	return err
 }
 
+// GetConflicts возвращает все конфликтные записи.
 func (s *storageDB) GetConflicts(ctx context.Context) ([]models.CipherData, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -45,6 +47,7 @@ func (s *storageDB) GetConflicts(ctx context.Context) ([]models.CipherData, erro
 	return conflicts, nil
 }
 
+// DeleteConflict удаляет конфликтную запись.
 func (s *storageDB) DeleteConflict(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM conflicts WHERE id = ?`, id)
 	return err

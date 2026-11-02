@@ -27,7 +27,6 @@ func TestConfigClient_Get(t *testing.T) {
 				"-a", "127.0.0.1:9090",
 				"-p", "https",
 				"-d", "flag.db",
-				"-t", "flag.crt",
 				"-i", "1m",
 				"-s", "3s",
 			},
@@ -35,7 +34,6 @@ func TestConfigClient_Get(t *testing.T) {
 				"CLIENT_ADDRESS":       "10.0.0.1:8080",
 				"CLIENT_PROTOCOL":      "grpc",
 				"CLIENT_PATH_DB":       "env.db",
-				"CLIENT_PATH_TLS":      "env.crt",
 				"CLIENT_SEND_INTERVAL": "10m",
 				"CLIENT_COOLDOWN":      "30s",
 			},
@@ -46,7 +44,6 @@ func TestConfigClient_Get(t *testing.T) {
 				},
 				Protocol:     "https",
 				PathDB:       "flag.db",
-				PathTLS:      "flag.crt",
 				SendInterval: 1 * time.Minute,
 				Cooldown:     3 * time.Second,
 			},
@@ -60,7 +57,6 @@ func TestConfigClient_Get(t *testing.T) {
 				"CLIENT_ADDRESS":       "10.0.0.1:8080",
 				"CLIENT_PROTOCOL":      "grpc",
 				"CLIENT_PATH_DB":       "env.db",
-				"CLIENT_PATH_TLS":      "env.crt",
 				"CLIENT_SEND_INTERVAL": "10m",
 				"CLIENT_COOLDOWN":      "30s",
 			},
@@ -71,7 +67,6 @@ func TestConfigClient_Get(t *testing.T) {
 				},
 				Protocol:     "grpc",
 				PathDB:       "env.db",
-				PathTLS:      "env.crt",
 				SendInterval: 10 * time.Minute,
 				Cooldown:     30 * time.Second,
 			},
@@ -105,7 +100,6 @@ func TestConfigClient_Validate(t *testing.T) {
 		Protocol:     "https",
 		SendInterval: 5 * time.Minute,
 		Cooldown:     5 * time.Second,
-		PathTLS:      certPath,
 		PathDB:       "client.db",
 	}
 	tests := []struct {
@@ -176,25 +170,11 @@ func TestConfigClient_Validate(t *testing.T) {
 			expErr: "минимальный интервал не может быть больше основного интервала синхронизации",
 		},
 		{
-			name: "пустой путь к TLS-сертификату",
-			set: func(cfg *ConfigClient) {
-				cfg.PathTLS = ""
-			},
-			expErr: "путь к TLS-сертификату не может быть пустым",
-		},
-		{
 			name: "пустой путь к базе данных",
 			set: func(cfg *ConfigClient) {
 				cfg.PathDB = ""
 			},
 			expErr: "путь к базе данных не может быть пустым",
-		},
-		{
-			name: "файл TLS-сертификата не существует",
-			set: func(cfg *ConfigClient) {
-				cfg.PathTLS = filepath.Join(testDir, "non_existent.crt")
-			},
-			expErr: "файл TLS-сертификата не найден",
 		},
 	}
 	for _, tt := range tests {

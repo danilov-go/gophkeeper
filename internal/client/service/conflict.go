@@ -8,6 +8,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// GetConflicts возвращает и расшифровывает все обнаруженные конфликты версий.
 func (s *ClientService) GetConflicts(ctx context.Context) ([]models.Conflict, error) {
 	conflicts, err := s.storage.GetConflicts(ctx)
 	if err != nil {
@@ -39,6 +40,7 @@ func (s *ClientService) GetConflicts(ctx context.Context) ([]models.Conflict, er
 	return result, nil
 }
 
+// FixConflict разрешает конфликт версий секрета, сохраняя либо серверную, либо локальную версию.
 func (s *ClientService) FixConflict(ctx context.Context, id string, keepServer bool) error {
 	conflicts, err := s.storage.GetConflicts(ctx)
 	if err != nil {

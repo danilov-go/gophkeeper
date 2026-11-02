@@ -36,6 +36,7 @@ func InitDB(path string) (*storageDB, error) {
 	return s, nil
 }
 
+// СreateTable создает таблицы пользователей, секретов, журналов и конфликтов.
 func (s *storageDB) СreateTable() error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS users (
@@ -74,10 +75,12 @@ func (s *storageDB) СreateTable() error {
 	return nil
 }
 
+// Ping проверяет доступность хранилища.
 func (s *storageDB) Ping(ctx context.Context) error {
 	return s.db.PingContext(ctx)
 }
 
+// Close закрывает текущее соединение с базой данных.
 func (s *storageDB) Close() error {
 	return s.db.Close()
 }

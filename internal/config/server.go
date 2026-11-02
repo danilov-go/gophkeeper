@@ -11,13 +11,20 @@ import (
 
 // ConfigServer описывает настройки клиента.
 type ConfigServer struct {
-	Net         NetAddress `mapstructure:"address"`
-	ConfigPath  string     `mapstructure:"config_path"`
-	Protocol    string     `mapstructure:"protocol"`
-	DatabaseDSN string     `mapstructure:"database_dsn"`
-	PathTLSCert string     `mapstructure:"path_tls_cert"`
-	PathTLSKey  string     `mapstructure:"path_tls_key"`
-	Token       string     `mapstructure:"token"`
+	// Net содержит сетевой адрес и порт сервера.
+	Net NetAddress `mapstructure:"address"`
+	// ConfigPath содержит путь к конфигурационному файлу JSON.
+	ConfigPath string `mapstructure:"config_path"`
+	// Protocol содержит используемый транспортный протокол.
+	Protocol string `mapstructure:"protocol"`
+	// DatabaseDSN содержит строку подключения к базе данных.
+	DatabaseDSN string `mapstructure:"database_dsn"`
+	// PathTLSCert содержит путь к файлу TLS-сертификата.
+	PathTLSCert string `mapstructure:"path_tls_cert"`
+	// PathTLSKey содержит путь к файлу TLS-ключа.
+	PathTLSKey string `mapstructure:"path_tls_key"`
+	// Token содержит секретный ключ для генерации и валидации JWT-токенов.
+	Token string `mapstructure:"token"`
 }
 
 // Get парсит конфигурацию сервера.

@@ -1,4 +1,4 @@
-// Package transport реализует HTTP-сервер приложения.
+// Package transport реализует сервер приложения.
 package transport
 
 import (

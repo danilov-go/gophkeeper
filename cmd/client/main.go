@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "embed"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danilov-go/gophkeeper/internal/client/repository/db"
 	"github.com/danilov-go/gophkeeper/internal/client/sender"
@@ -23,6 +25,9 @@ var (
 	buildDate    string = "N/A"
 	buildCommit  string = "N/A"
 )
+
+//go:embed ca.crt
+var Cert []byte
 
 func main() {
 	if err := logger.Initialize("info"); err != nil {
@@ -43,12 +48,12 @@ func main() {
 	deviceID := fmt.Sprintf("%d", os.Getpid())
 	if cfg.Protocol == "grpc" {
 		var err error
-		send, err = sender.NewGRPCSender(cfg.Net.String(), logger.Log.Sugar(), deviceID, cfg.PathTLS)
+		send, err = sender.NewGRPCSender(cfg.Net.String(), logger.Log.Sugar(), deviceID, Cert)
 		if err != nil {
 			logger.Log.Sugar().Fatalw("не удалось запустить gRPC клиент", "error", err)
 		}
 	} else {
-		send = sender.NewHTTPSender(*cfg, logger.Log.Sugar(), deviceID, cfg.PathTLS)
+		send = sender.NewHTTPSender(*cfg, logger.Log.Sugar(), deviceID, Cert)
 	}
 	syncChan := make(chan struct{}, 1)
 	conflict := strategy.NewClientStrategy()

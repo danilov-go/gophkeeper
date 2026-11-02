@@ -14,12 +14,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// GRPCHandler связывает gRPC-запросов с бизнес логикой.
 type GRPCHandler struct {
 	proto.UnimplementedSyncServiceServer
 	service ServerService
 	logger  log
 }
 
+// NewGRPCHandler создает новый экземпляр GRPCHandler.
 func NewGRPCHandler(s ServerService, l log) *GRPCHandler {
 	return &GRPCHandler{
 		service: s,
@@ -27,6 +29,7 @@ func NewGRPCHandler(s ServerService, l log) *GRPCHandler {
 	}
 }
 
+// GetSalt возвращает соль пользователя по его логину для последующей аутентификации.
 func (s *GRPCHandler) GetSalt(ctx context.Context, req *proto.SaltRequest) (*proto.SaltResponse, error) {
 	if req.Login == "" {
 		return nil, status.Error(codes.InvalidArgument, "логин не может быть пустым")
@@ -35,6 +38,7 @@ func (s *GRPCHandler) GetSalt(ctx context.Context, req *proto.SaltRequest) (*pro
 	return &proto.SaltResponse{Salt: salt}, nil
 }
 
+// RegisterUser регистрирует нового пользователя и возвращает токен доступа.
 func (s *GRPCHandler) RegisterUser(ctx context.Context, req *proto.RegisterRequest) (*proto.AuthResponse, error) {
 	token, err := s.service.Register(ctx, req.Login, req.Hash, req.Salt)
 	if err != nil {
@@ -47,6 +51,7 @@ func (s *GRPCHandler) RegisterUser(ctx context.Context, req *proto.RegisterReque
 	return &proto.AuthResponse{Token: token}, nil
 }
 
+// LoginUser выполняет аутентификацию пользователя, возвращая токен доступа и соль.
 func (s *GRPCHandler) LoginUser(ctx context.Context, req *proto.LoginRequest) (*proto.AuthResponse, error) {
 	token, salt, err := s.service.Login(ctx, req.Login, req.Hash)
 	if err != nil {
@@ -55,6 +60,7 @@ func (s *GRPCHandler) LoginUser(ctx context.Context, req *proto.LoginRequest) (*
 	return &proto.AuthResponse{Token: token, Salt: salt}, nil
 }
 
+// Pull принимает версии от клиента и возвращает секреты, которые необходимо обновить.
 func (s *GRPCHandler) Pull(ctx context.Context, req *proto.PullRequest) (*proto.PullResponse, error) {
 	userID, err := s.getUser(ctx)
 	if err != nil {
@@ -86,6 +92,7 @@ func (s *GRPCHandler) Pull(ctx context.Context, req *proto.PullRequest) (*proto.
 	return &proto.PullResponse{Secrets: protoSecrets}, nil
 }
 
+// Push принимает журнал изменений от клиента и применяет его на сервере.
 func (s *GRPCHandler) Push(ctx context.Context, req *proto.PushRequest) (*proto.PushResponse, error) {
 	id, err := s.getUser(ctx)
 	if err != nil {
@@ -118,6 +125,7 @@ func (s *GRPCHandler) Push(ctx context.Context, req *proto.PushRequest) (*proto.
 	return &proto.PushResponse{Status: "success"}, nil
 }
 
+// Stream отправляет клиенту события синхронизации.
 func (s *GRPCHandler) Stream(req *proto.StreamRequest, stream proto.SyncService_StreamServer) error {
 	id, err := s.authUserID(stream.Context())
 	if err != nil {
@@ -171,6 +179,7 @@ func (s *GRPCHandler) authUserID(ctx context.Context) (int, error) {
 	return authUser.ID, nil
 }
 
+// AuthInterceptor возвращает интерцептор для проверки JWT-токенов.
 func AuthInterceptor(service ServerService) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if strings.HasSuffix(info.FullMethod, "GetSalt") ||

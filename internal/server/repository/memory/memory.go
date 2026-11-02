@@ -8,10 +8,12 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// Strategy определяет правила синхронизации.
 type Strategy interface {
 	Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction
 }
 
+// MemStorage определяет хранилище данных в оперативной памяти.
 type MemStorage struct {
 	strategy   Strategy
 	mu         sync.RWMutex
@@ -21,7 +23,8 @@ type MemStorage struct {
 	secrets    map[int]map[string]models.CipherData
 }
 
-func InitMemStorage(strategy Strategy) *MemStorage {
+// NewMemStorage создает новый экземпляр MemStorage.
+func NewMemStorage(strategy Strategy) *MemStorage {
 	return &MemStorage{
 		strategy:   strategy,
 		nextID:     1,
@@ -31,6 +34,7 @@ func InitMemStorage(strategy Strategy) *MemStorage {
 	}
 }
 
+// GetSecrets возвращает измененные секреты пользователя, отфильтрованные через стратегию правил.
 func (m *MemStorage) GetSecrets(ctx context.Context, userID int, v models.SecretVersions) ([]models.CipherData, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -50,6 +54,7 @@ func (m *MemStorage) GetSecrets(ctx context.Context, userID int, v models.Secret
 	return cipherData, nil
 }
 
+// UpdateSecrets сохраняет изменения секретов, если версия клиента выше версии сервера.
 func (m *MemStorage) UpdateSecrets(ctx context.Context, userID int, changelogs models.Changelogs) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -116,8 +121,4 @@ func (m *MemStorage) GetUser(ctx context.Context, login string) (models.User, er
 		return models.User{}, models.ErrUserNotFound
 	}
 	return user, nil
-}
-
-func (m *MemStorage) Delete(ctx context.Context, userID, id int) error {
-	return nil
 }

@@ -63,7 +63,7 @@ func TestHTTPSender_Register(t *testing.T) {
 			defer server.Close()
 			cfg := config.ConfigClient{}
 			logger := zaptest.NewLogger(t).Sugar()
-			sender := NewHTTPSender(cfg, logger, deviceID, "")
+			sender := NewHTTPSender(cfg, logger, deviceID, []byte{})
 			sender.client.SetBaseURL(server.URL)
 			err := sender.Register(context.Background(), expLogin, expHash, expSalt)
 			if tt.expErr != "" {
@@ -108,7 +108,7 @@ func TestHTTPSender_Auth(t *testing.T) {
 			defer server.Close()
 			cfg := config.ConfigClient{}
 			logger := zaptest.NewLogger(t).Sugar()
-			sender := NewHTTPSender(cfg, logger, deviceID, "")
+			sender := NewHTTPSender(cfg, logger, deviceID, []byte{})
 			sender.client.SetBaseURL(server.URL)
 			err := sender.Auth(context.Background(), expLogin, expHash)
 			if tt.expErr != "" {
@@ -162,7 +162,7 @@ func TestHTTPSender_Sync(t *testing.T) {
 			defer server.Close()
 			cfg := config.ConfigClient{}
 			logger := zaptest.NewLogger(t).Sugar()
-			sender := NewHTTPSender(cfg, logger, deviceID, "")
+			sender := NewHTTPSender(cfg, logger, deviceID, []byte{})
 			sender.client.SetBaseURL(server.URL)
 			sender.token = tt.expToken
 			versions := map[string]models.VersionTime{secretID: {Version: 1, UpdatedAt: time.Now()}}
@@ -209,7 +209,7 @@ func TestHTTPSender_GetSalt(t *testing.T) {
 			defer server.Close()
 			cfg := config.ConfigClient{}
 			logger := zaptest.NewLogger(t).Sugar()
-			sender := NewHTTPSender(cfg, logger, deviceID, "")
+			sender := NewHTTPSender(cfg, logger, deviceID, []byte{})
 			sender.client.SetBaseURL(server.URL)
 			salt, err := sender.GetSalt(context.Background(), expLogin)
 			if tt.expErr != "" {

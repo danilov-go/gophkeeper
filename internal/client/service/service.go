@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику клиентского приложения.
 package service
 
 import (
@@ -30,11 +31,15 @@ type Storage interface {
 	DeleteConflict(ctx context.Context, id string) error
 }
 
+// Strategy содержит правила синхронизации секретов.
+//
 //go:generate mockery --name=Sender --case=underscore --output=./mocks
 type Strategy interface {
 	Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction
 }
 
+// Sender определяет методы сетевого взаимодействия с сервером.
+//
 //go:generate mockery --name=Strategy --case=underscore --output=./mocks
 type Sender interface {
 	Register(ctx context.Context, login, hash, salt string) error

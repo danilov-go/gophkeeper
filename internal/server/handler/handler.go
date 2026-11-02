@@ -11,6 +11,8 @@ type log interface {
 	Errorw(msg string, keysAndValues ...any)
 }
 
+// ServerService определяет методы для взаимодействия с бизнес логикой.
+//
 //go:generate mockery --name=ServerService --output=./mocks --case=underscore
 type ServerService interface {
 	BuildJWTString(id int, login string) (string, error)

@@ -25,6 +25,7 @@ type log interface {
 	Debugf(template string, args ...interface{})
 }
 
+// HTTPSender отправляет сетевые запросы через HTTPS.
 type HTTPSender struct {
 	client    *resty.Client
 	sseClient *http.Client
@@ -36,14 +37,14 @@ type HTTPSender struct {
 }
 
 // NewHTTPSender создает экземпляр HTTPSender.
-func NewHTTPSender(cfg config.ConfigClient, l log, deviceID, pathTLS string) *HTTPSender {
+func NewHTTPSender(cfg config.ConfigClient, l log, deviceID string, cert []byte) *HTTPSender {
 	client := resty.New().
 		SetTimeout(time.Second * 10).
 		SetBaseURL("https://" + cfg.Net.String()).
 		SetRetryCount(3).
 		SetRetryWaitTime(1 * time.Second).
 		SetRetryMaxWaitTime(5 * time.Second).
-		SetRootCertificate(pathTLS)
+		SetRootCertificateFromString(string(cert))
 	client.AddRetryCondition(func(r *resty.Response, err error) bool {
 		if err != nil {
 			return true
@@ -148,6 +149,7 @@ func (s *HTTPSender) Auth(ctx context.Context, login, hash string) error {
 	return nil
 }
 
+// Sync скачивает обновления и отправляет локальные изменения на сервер.
 func (s *HTTPSender) Sync(ctx context.Context, versions map[string]models.VersionTime, changelogs []models.Changelog) ([]models.CipherData, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -221,12 +223,14 @@ func (s *HTTPSender) push(ctx context.Context, changelogs []models.Changelog, to
 	return nil
 }
 
+// Logout удаляет сохраненный токен авторизации.
 func (s *HTTPSender) Logout() {
 	s.mu.Lock()
 	s.token = ""
 	s.mu.Unlock()
 }
 
+// ServerEvent слушает поток событий от сервера для запуска синхронизации.
 func (s *HTTPSender) ServerEvent(ctx context.Context, runSync func()) {
 	go func() {
 		for {
@@ -280,6 +284,7 @@ func (s *HTTPSender) ServerEvent(ctx context.Context, runSync func()) {
 	}()
 }
 
+// GetSalt запрашивает соль пользователя по его логину.
 func (s *HTTPSender) GetSalt(ctx context.Context, login string) (string, error) {
 	var req models.AuthSalt
 	resp, err := s.client.R().

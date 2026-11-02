@@ -98,6 +98,7 @@ func (h *Handler) LoginUser() http.HandlerFunc {
 	})
 }
 
+// GetSalt возвращает соль пользователя по его логину для последующей аутентификации.
 func (h *Handler) GetSalt() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

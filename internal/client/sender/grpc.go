@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +20,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// GRPCSender отправляет сетевые запросы через gRPC.
 type GRPCSender struct {
 	client   proto.SyncServiceClient
 	conn     *grpc.ClientConn
@@ -30,12 +30,10 @@ type GRPCSender struct {
 	mu       sync.RWMutex
 }
 
+// NewGRPCSender создает экземпляр GRPCSender.
+//
 //go:generate mockery --name=SyncServiceClient --dir=../../proto --output=../../proto --outpkg=proto --filename=/mocks/gophkeeper_mock.go --structname=MockSyncServiceClient
-func NewGRPCSender(serverAddr string, l log, deviceID, pathTLS string) (*GRPCSender, error) {
-	cert, err := os.ReadFile(pathTLS)
-	if err != nil {
-		return nil, err
-	}
+func NewGRPCSender(serverAddr string, l log, deviceID string, cert []byte) (*GRPCSender, error) {
 	certPool := x509.NewCertPool()
 	if ok := certPool.AppendCertsFromPEM(cert); !ok {
 		return nil, fmt.Errorf("ошибка парсинга сертификата")
@@ -53,6 +51,7 @@ func NewGRPCSender(serverAddr string, l log, deviceID, pathTLS string) (*GRPCSen
 	}, nil
 }
 
+// GetSalt запрашивает соль пользователя по его логину.
 func (s *GRPCSender) GetSalt(ctx context.Context, login string) (string, error) {
 	resp, err := s.client.GetSalt(ctx, &proto.SaltRequest{Login: login})
 	if err != nil {
@@ -61,6 +60,7 @@ func (s *GRPCSender) GetSalt(ctx context.Context, login string) (string, error) 
 	return resp.Salt, nil
 }
 
+// Register отправляет запрос на регистрацию нового пользователя.
 func (s *GRPCSender) Register(ctx context.Context, login, hash, salt string) error {
 	resp, err := s.client.RegisterUser(ctx, &proto.RegisterRequest{
 		Login: login,
@@ -79,6 +79,7 @@ func (s *GRPCSender) Register(ctx context.Context, login, hash, salt string) err
 	return nil
 }
 
+// Auth выполняет аутентификацию пользователя на сервере и сохраняет JWT-токен.
 func (s *GRPCSender) Auth(ctx context.Context, login, hash string) error {
 	resp, err := s.client.LoginUser(ctx, &proto.LoginRequest{
 		Login: login,
@@ -96,6 +97,7 @@ func (s *GRPCSender) Auth(ctx context.Context, login, hash string) error {
 	return nil
 }
 
+// Sync скачивает обновления и отправляет локальные изменения на сервер.
 func (s *GRPCSender) Sync(ctx context.Context, versions map[string]models.VersionTime, changelogs []models.Changelog) ([]models.CipherData, error) {
 	s.mu.RLock()
 	token := s.token
@@ -155,12 +157,14 @@ func (s *GRPCSender) Sync(ctx context.Context, versions map[string]models.Versio
 	return cipherData, nil
 }
 
+// Logout удаляет сохраненный токен авторизации.
 func (s *GRPCSender) Logout() {
 	s.mu.Lock()
 	s.token = ""
 	s.mu.Unlock()
 }
 
+// ServerEvent слушает поток событий от сервера для запуска синхронизации.
 func (s *GRPCSender) ServerEvent(ctx context.Context, runSync func()) {
 	go func() {
 		for {
@@ -210,6 +214,7 @@ func (s *GRPCSender) ServerEvent(ctx context.Context, runSync func()) {
 	}()
 }
 
+// Close закрывает сетевое gRPC-соединение с сервером.
 func (g *GRPCSender) Close() {
 	if g.conn != nil {
 		_ = g.conn.Close()

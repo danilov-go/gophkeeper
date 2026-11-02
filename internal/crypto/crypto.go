@@ -24,6 +24,7 @@ const (
 	sizeSalt     = 16
 )
 
+// GenerateSalt генерирует случайную соль в формате hex-строки.
 func GenerateSalt() (string, error) {
 	random := make([]byte, sizeSalt)
 	_, err := rand.Read(random)

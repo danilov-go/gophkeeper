@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// SaveSecret сохраняет секрет.
 func (s *storageDB) SaveSecret(ctx context.Context, secret models.CipherData) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
@@ -44,6 +45,7 @@ func (s *storageDB) SaveSecret(ctx context.Context, secret models.CipherData) (s
 	return secret.ID, tx.Commit()
 }
 
+// GetSecret возвращает секрет по его ID.
 func (s *storageDB) GetSecret(ctx context.Context, id string) (models.CipherData, error) {
 	var secret models.CipherData
 	if err := ctx.Err(); err != nil {
@@ -62,6 +64,7 @@ func (s *storageDB) GetSecret(ctx context.Context, id string) (models.CipherData
 	return secret, nil
 }
 
+// GetAllSecret возвращает список секретов одного типа.
 func (s *storageDB) GetAllSecret(ctx context.Context, sType models.SecretType) ([]models.CipherData, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -91,6 +94,7 @@ func (s *storageDB) GetAllSecret(ctx context.Context, sType models.SecretType) (
 	return secrets, nil
 }
 
+// UpdateSecret обновляет существующие секрет.
 func (s *storageDB) UpdateSecret(ctx context.Context, secret models.CipherData) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -128,6 +132,7 @@ func (s *storageDB) UpdateSecret(ctx context.Context, secret models.CipherData) 
 	return tx.Commit()
 }
 
+// DeleteSecret удаляет секрет из базы данных и добавляет запись в журнал изменений.
 func (s *storageDB) DeleteSecret(ctx context.Context, id string, sync bool) error {
 	if err := ctx.Err(); err != nil {
 		return err

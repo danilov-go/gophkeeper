@@ -12,13 +12,18 @@ import (
 
 // ConfigClient описывает настройки клиента.
 type ConfigClient struct {
-	Net          NetAddress    `mapstructure:"address"`
-	ConfigPath   string        `mapstructure:"config_path"`
-	Protocol     string        `mapstructure:"protocol"`
-	PathDB       string        `mapstructure:"path_db"`
-	PathTLS      string        `mapstructure:"path_tls"`
+	// Net содержит сетевой адрес и порт сервера.
+	Net NetAddress `mapstructure:"address"`
+	// ConfigPath содержит путь к конфигурационному файлу JSON.
+	ConfigPath string `mapstructure:"config_path"`
+	// Protocol содержит используемый транспортный протокол.
+	Protocol string `mapstructure:"protocol"`
+	// PathDB содержит путь к файлу базы данных.
+	PathDB string `mapstructure:"path_db"`
+	// SendInterval содержит интервал времени между отправками данных на сервер.
 	SendInterval time.Duration `mapstructure:"send_interval"`
-	Cooldown     time.Duration `mapstructure:"cooldown"`
+	// Cooldown содержит время ожидания перед повторной попыткой при ошибке соединения.
+	Cooldown time.Duration `mapstructure:"cooldown"`
 }
 
 // Get парсит конфигурацию клиента.
@@ -35,9 +40,6 @@ func (c *ConfigClient) Get() error {
 	if pflag.CommandLine.Lookup("pathDB") == nil {
 		pflag.CommandLine.StringP("pathDB", "d", "", "Path to DB file")
 	}
-	if pflag.CommandLine.Lookup("PathTLS") == nil {
-		pflag.CommandLine.StringP("PathTLS", "t", "", "Path to TLS")
-	}
 	if pflag.CommandLine.Lookup("sendInterval") == nil {
 		pflag.CommandLine.DurationP("sendInterval", "i", 0, "Interval for full data synchronization")
 	}
@@ -48,7 +50,6 @@ func (c *ConfigClient) Get() error {
 	v := viper.New()
 	v.SetDefault("address", "localhost:8080")
 	v.SetDefault("protocol", "https")
-	v.SetDefault("path_tls", "certs/ca.crt")
 	v.SetDefault("send_interval", 5*time.Minute)
 	v.SetDefault("cooldown", 5*time.Second)
 	v.SetDefault("PathDB", "client.db")
@@ -64,9 +65,6 @@ func (c *ConfigClient) Get() error {
 		return err
 	}
 	if err := v.BindPFlag("path_db", pflag.CommandLine.Lookup("pathDB")); err != nil {
-		return err
-	}
-	if err := v.BindPFlag("path_tls", pflag.CommandLine.Lookup("PathTLS")); err != nil {
 		return err
 	}
 	if err := v.BindPFlag("send_interval", pflag.CommandLine.Lookup("sendInterval")); err != nil {
@@ -114,18 +112,8 @@ func (c *ConfigClient) Validate() error {
 	if c.Cooldown > c.SendInterval {
 		return errors.New("минимальный интервал не может быть больше основного интервала синхронизации")
 	}
-	if c.PathTLS == "" {
-		return errors.New("путь к TLS-сертификату не может быть пустым")
-	}
 	if c.PathDB == "" {
 		return errors.New("путь к базе данных не может быть пустым")
-	}
-	_, err := os.Stat(c.PathTLS)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return errors.New("файл TLS-сертификата не найден")
-		}
-		return err
 	}
 	return nil
 }

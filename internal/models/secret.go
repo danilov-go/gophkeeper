@@ -16,26 +16,17 @@ const (
 	TypeCard          SecretType = "card"
 )
 
+// SecretData возвращает тип зашифрованных данных.
 type SecretData interface {
 	SecretType() SecretType
 }
 
-func (*LoginPassword) SecretType() SecretType {
-	return TypeLoginPassword
-}
+func (*LoginPassword) SecretType() SecretType { return TypeLoginPassword }
+func (*TextData) SecretType() SecretType      { return TypeText }
+func (*BinaryData) SecretType() SecretType    { return TypeBinary }
+func (*Card) SecretType() SecretType          { return TypeCard }
 
-func (*TextData) SecretType() SecretType {
-	return TypeText
-}
-
-func (*BinaryData) SecretType() SecretType {
-	return TypeBinary
-}
-
-func (*Card) SecretType() SecretType {
-	return TypeCard
-}
-
+// NewSecretData создает объект секретных данных из JSON на основе их типа.
 func NewSecretData(secretType SecretType, body []byte) (SecretData, error) {
 	switch secretType {
 	case TypeCard:
@@ -67,6 +58,7 @@ func NewSecretData(secretType SecretType, body []byte) (SecretData, error) {
 	}
 }
 
+// Secret определяет расшифрованный секрет пользователя.
 type Secret struct {
 	ID   string     `json:"id"`
 	Type SecretType `json:"type"`

@@ -45,7 +45,7 @@ func TestServerService_Register(t *testing.T) {
 			expErr: models.ErrUserAlreadyExists,
 		},
 	}
-	storage := memory.InitMemStorage(strategy.NewServerStrategy())
+	storage := memory.NewMemStorage(strategy.NewServerStrategy())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := service.NewServerService(storage, jwtKey, sync.NewSyncNotifier())
@@ -63,7 +63,7 @@ func TestServerService_Register(t *testing.T) {
 }
 
 func TestServerService_Login(t *testing.T) {
-	storage := memory.InitMemStorage(strategy.NewServerStrategy())
+	storage := memory.NewMemStorage(strategy.NewServerStrategy())
 	svc := service.NewServerService(storage, jwtKey, sync.NewSyncNotifier())
 	ctx := t.Context()
 	_, err := storage.SaveUser(ctx, expLogin, expHash, expSalt)
@@ -107,7 +107,7 @@ func TestServerService_Login(t *testing.T) {
 }
 
 func TestServerService_GetSalt(t *testing.T) {
-	storage := memory.InitMemStorage(strategy.NewServerStrategy())
+	storage := memory.NewMemStorage(strategy.NewServerStrategy())
 	svc := service.NewServerService(storage, jwtKey, sync.NewSyncNotifier())
 	ctx := t.Context()
 	_, err := storage.SaveUser(ctx, expLogin, expHash, expSalt)
@@ -145,7 +145,7 @@ func TestServerService_GetSalt(t *testing.T) {
 }
 
 func TestServerService_GetUserLogin(t *testing.T) {
-	storage := memory.InitMemStorage(strategy.NewServerStrategy())
+	storage := memory.NewMemStorage(strategy.NewServerStrategy())
 	svc := service.NewServerService(storage, jwtKey, sync.NewSyncNotifier())
 	validToken, err := svc.BuildJWTString(userID, expLogin)
 	assert.NoError(t, err)
@@ -184,7 +184,7 @@ func TestServerService_GetUserLogin(t *testing.T) {
 }
 
 func TestServerService_Push(t *testing.T) {
-	storage := memory.InitMemStorage(strategy.NewServerStrategy())
+	storage := memory.NewMemStorage(strategy.NewServerStrategy())
 	svc := service.NewServerService(storage, jwtKey, sync.NewSyncNotifier())
 	ctx := t.Context()
 	now := time.Now().Round(0)
@@ -224,7 +224,7 @@ func TestServerService_Push(t *testing.T) {
 }
 
 func TestServerService_Pull(t *testing.T) {
-	storage := memory.InitMemStorage(strategy.NewServerStrategy())
+	storage := memory.NewMemStorage(strategy.NewServerStrategy())
 	svc := service.NewServerService(storage, jwtKey, sync.NewSyncNotifier())
 	ctx := t.Context()
 	now := time.Now()
@@ -268,7 +268,7 @@ func TestServerService_Pull(t *testing.T) {
 }
 
 func TestServerService_Event(t *testing.T) {
-	storage := memory.InitMemStorage(strategy.NewServerStrategy())
+	storage := memory.NewMemStorage(strategy.NewServerStrategy())
 	svc := service.NewServerService(storage, jwtKey, sync.NewSyncNotifier())
 	ctx := t.Context()
 	ch, closeFunc := svc.Event(ctx, 15, "deviceID")

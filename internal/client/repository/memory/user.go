@@ -7,6 +7,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// SaveUser сохраняет нового пользователя.
 func (m *MemStorage) SaveUser(ctx context.Context, login, hash, salt string) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -21,6 +22,7 @@ func (m *MemStorage) SaveUser(ctx context.Context, login, hash, salt string) err
 	return nil
 }
 
+// GetUser возвращает данные пользователя.
 func (m *MemStorage) GetUser(ctx context.Context, login string) (models.LocalUser, error) {
 	var user models.LocalUser
 	if err := ctx.Err(); err != nil {

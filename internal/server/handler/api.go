@@ -10,6 +10,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// PullHandler принимает версии от клиента и возвращает секреты, которые необходимо обновить.
 func (h *Handler) PullHandler() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user models.AuthUser) {
 		ctx := r.Context()
@@ -54,6 +55,7 @@ func (h *Handler) PullHandler() LoginHandlerFunc {
 	}
 }
 
+// PushHandler принимает журнал изменений от клиента и применяет его на сервере.
 func (h *Handler) PushHandler() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user models.AuthUser) {
 		ctx := r.Context()
@@ -92,6 +94,7 @@ func (h *Handler) PushHandler() LoginHandlerFunc {
 	}
 }
 
+// StreamHandler отправляет клиенту события синхронизации.
 func (h *Handler) StreamHandler() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user models.AuthUser) {
 		ctx := r.Context()

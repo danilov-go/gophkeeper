@@ -5,46 +5,49 @@ import (
 	"fmt"
 )
 
+// MetaData возвращает тип метаданных секрета.
 type MetaData interface {
 	SecretType() SecretType
 }
 
+// MetaCard определяет метаданные для типа Card.
 type MetaCard struct {
-	Name     string `json:"name"`
+	// Name содержит описание, вводимое пользователем.
+	Name string `json:"name"`
+	// BankName содержит наименование банка.
 	BankName string `json:"bank_name"`
 }
 
+// MetaLoginPassword определяет метаданные для типа LoginPassword.
 type MetaLoginPassword struct {
+	// Name содержит описание, вводимое пользователем.
 	Name string `json:"name"`
-	URL  string `json:"url"`
+	// URL содержит адрес веб-страницы авторизации.
+	URL string `json:"url"`
 }
 
+// MetaText определяет метаданные для типа Text.
 type MetaText struct {
+	// Name содержит описание, вводимое пользователем.
 	Name string `json:"name"`
 }
 
+// MetaBinary определяет метаданные для типа Binary.
 type MetaBinary struct {
+	// Name содержит название файла с расширением.
 	Name string `json:"name"`
-	Size int64  `json:"size"`
+	//Size содержит размер файла.
+	Size int64 `json:"size"`
+	//Type содержит расширение файла.
 	Type string `json:"type"`
 }
 
-func (*MetaCard) SecretType() SecretType {
-	return TypeCard
-}
+func (*MetaCard) SecretType() SecretType          { return TypeCard }
+func (*MetaLoginPassword) SecretType() SecretType { return TypeLoginPassword }
+func (*MetaText) SecretType() SecretType          { return TypeText }
+func (*MetaBinary) SecretType() SecretType        { return TypeBinary }
 
-func (*MetaLoginPassword) SecretType() SecretType {
-	return TypeLoginPassword
-}
-
-func (*MetaText) SecretType() SecretType {
-	return TypeText
-}
-
-func (*MetaBinary) SecretType() SecretType {
-	return TypeBinary
-}
-
+// NewMetaData создает метаданные секрета из JSON на основе их типа.
 func NewMetaData(secretType SecretType, body []byte) (MetaData, error) {
 	switch secretType {
 	case TypeCard:

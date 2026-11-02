@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику сервера
 package service
 
 import (
@@ -10,10 +11,10 @@ import (
 
 	"github.com/danilov-go/gophkeeper/internal/crypto"
 	"github.com/danilov-go/gophkeeper/internal/models"
-	"github.com/danilov-go/gophkeeper/internal/server/sync"
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Storage определяет методы для взаимодействия с хранилищем.
 type Storage interface {
 	SaveUser(ctx context.Context, login, hash, salt string) (int, error)
 	GetUser(ctx context.Context, login string) (models.User, error)
@@ -21,13 +22,21 @@ type Storage interface {
 	UpdateSecrets(ctx context.Context, userID int, changelogs models.Changelogs) error
 }
 
+// Publisher определяет управление подписками и рассылки уведомлений.
+type Publisher interface {
+	Register(userID int, deviceID string) (<-chan models.SyncEvent, func())
+	Notify(event models.SyncEvent)
+}
+
+// ServerService определяет методы бизнес-логики сервера.
 type ServerService struct {
 	storage  Storage
 	jwtKey   string
-	notifier *sync.SyncNotifier
+	notifier Publisher
 }
 
-func NewServerService(s Storage, jwtKey string, notifier *sync.SyncNotifier) *ServerService {
+// NewServerService создает новый экземпляр ServerService.
+func NewServerService(s Storage, jwtKey string, notifier Publisher) *ServerService {
 	return &ServerService{
 		storage:  s,
 		jwtKey:   jwtKey,
@@ -47,6 +56,7 @@ func (s *ServerService) BuildJWTString(id int, login string) (string, error) {
 	return token.SignedString([]byte(s.jwtKey))
 }
 
+// Register хеширует пароль и регистрирует нового пользователя.
 func (s *ServerService) Register(ctx context.Context, login, hash, salt string) (string, error) {
 	serverHash, err := crypto.Hash(hash)
 	if err != nil {
@@ -63,6 +73,7 @@ func (s *ServerService) Register(ctx context.Context, login, hash, salt string) 
 	return s.BuildJWTString(id, login)
 }
 
+// Login проверяет учетные данные пользователя и возвращает токен и соль.
 func (s *ServerService) Login(ctx context.Context, login, hash string) (string, string, error) {
 	user, err := s.storage.GetUser(ctx, login)
 	if err != nil {
@@ -79,6 +90,7 @@ func (s *ServerService) Login(ctx context.Context, login, hash string) (string, 
 	return token, user.Salt, nil
 }
 
+// GetSalt возвращает соль пользователя или генерирует псевдослучайную соль, если пользователь не найден.
 func (s *ServerService) GetSalt(ctx context.Context, login string) string {
 	user, err := s.storage.GetUser(ctx, login)
 	if err != nil {
@@ -111,10 +123,12 @@ func (s *ServerService) GetUserLogin(tokenString string) (models.AuthUser, error
 	return user, nil
 }
 
+// Pull запрашивает из хранилища обновленные данные секретов на основе переданных версий.
 func (s *ServerService) Pull(ctx context.Context, userID int, versions models.SecretVersions) ([]models.CipherData, error) {
 	return s.storage.GetSecrets(ctx, userID, versions)
 }
 
+// Push сохраняет изменения секретов и уведомляет другие устройства пользователя о синхронизации.
 func (s *ServerService) Push(ctx context.Context, userID int, deviceID string, changelogs models.Changelogs) error {
 	err := s.storage.UpdateSecrets(ctx, userID, changelogs)
 	if err != nil {
@@ -128,6 +142,7 @@ func (s *ServerService) Push(ctx context.Context, userID int, deviceID string, c
 	return nil
 }
 
+// Event регистрирует устройство для прослушивания событий синхронизации.
 func (s *ServerService) Event(ctx context.Context, userID int, deviceID string) (<-chan models.SyncEvent, func()) {
 	return s.notifier.Register(userID, deviceID)
 }
