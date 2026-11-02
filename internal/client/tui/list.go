@@ -14,12 +14,15 @@ import (
 	"github.com/pquerna/otp/totp"
 )
 
+// MsgList событие для вывода текстовых сообщений на экран.
 type MsgList struct {
 	Text string
 }
 
+// MsgOTP событие таймера для обновления OTP-кодов.
 type MsgOTP time.Time
 
+// ListModel управляет экраном просмотра, поиска и удаления секретов.
 type ListModel struct {
 	service   SecretService
 	sType     models.SecretType
@@ -33,6 +36,7 @@ type ListModel struct {
 	help      help.Model
 }
 
+// NewListModel создает новый экземпляр ListModel.
 func NewListModel(srv SecretService, sType models.SecretType) ListModel {
 	ti := textinput.New()
 	ti.Placeholder = "Введите для фильтрации по названию..."
@@ -48,6 +52,7 @@ func NewListModel(srv SecretService, sType models.SecretType) ListModel {
 	}
 }
 
+// Init загружает список секретов и запускает таймер OTP кодов.
 func (m ListModel) Init() tea.Cmd {
 	return tea.Batch(
 		func() tea.Msg {
@@ -61,12 +66,14 @@ func (m ListModel) Init() tea.Cmd {
 	)
 }
 
+// Tick запускает секундный таймер для обновления OTP кодов.
 func Tick() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return MsgOTP(t)
 	})
 }
 
+// Update управляет логикой списка
 func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	if m.searching {
@@ -144,6 +151,7 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// View отрисовывает список секретов, форматируя строки под каждый тип данных.
 func (m ListModel) View() string {
 	var s strings.Builder
 	s.WriteString(fmt.Sprintf("Категория: %s \n\n", m.sType))

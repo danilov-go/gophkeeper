@@ -7,14 +7,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// AuthMenuModel управляет стартовым экраном выбора между входом и регистрацией.
 type AuthMenuModel struct {
-	cursor         int
-	options        []string
-	isRegistration bool
-	chosen         bool
-	bulder         Bulder
+	cursor       int
+	options      []string
+	registration bool
+	chosen       bool
+	bulder       Bulder
 }
 
+// NewAuthMenuModel создает новый экземпляр AuthMenuModel.
 func NewAuthMenuModel(bulder Bulder) AuthMenuModel {
 	return AuthMenuModel{
 		options: []string{"Войти в аккаунт", "Зарегистрироваться"},
@@ -26,6 +28,7 @@ func (m AuthMenuModel) Init() tea.Cmd {
 	return nil
 }
 
+// Update обрабатывает выбор между входом и регистрацией.
 func (m AuthMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -39,7 +42,7 @@ func (m AuthMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 		case "enter":
-			m.isRegistration = m.cursor == 1
+			m.registration = m.cursor == 1
 			m.chosen = true
 			return m, nil
 		}
@@ -47,6 +50,7 @@ func (m AuthMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// View отрисовывает пункты выбора авторизации и информацию о версии сборки.
 func (m AuthMenuModel) View() string {
 	var s strings.Builder
 	for i, option := range m.options {

@@ -11,6 +11,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// ConflictModel управляет экраном просмотра и разрешения конфликтов синхронизации.
 type ConflictModel struct {
 	service   SecretService
 	conflicts []models.Conflict
@@ -19,6 +20,7 @@ type ConflictModel struct {
 	help      help.Model
 }
 
+// NewConflictModel создает новый экземпляр ConflictModel.
 func NewConflictModel(srv SecretService) ConflictModel {
 	return ConflictModel{
 		service: srv,
@@ -26,6 +28,7 @@ func NewConflictModel(srv SecretService) ConflictModel {
 	}
 }
 
+// Init запускает загрузку списка конфликтов синхронизации.
 func (m ConflictModel) Init() tea.Cmd {
 	return func() tea.Msg {
 		list, err := m.service.GetConflicts(context.Background())
@@ -36,6 +39,7 @@ func (m ConflictModel) Init() tea.Cmd {
 	}
 }
 
+// Update обрабатывает выбор конфликта и применение серверной или локальной версии.
 func (m ConflictModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case []models.Conflict:
@@ -75,6 +79,7 @@ func (m ConflictModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// View отрисовывает список конфликтов.
 func (m ConflictModel) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("Ошибка загрузки конфликтов: %v\n,", m.err)

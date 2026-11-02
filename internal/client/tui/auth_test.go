@@ -74,7 +74,7 @@ func TestAuthMenuModel_Update(t *testing.T) {
 			model := updatedModel.(AuthMenuModel)
 			assert.Nil(t, cmd)
 			assert.Equal(t, tt.cursor, model.cursor)
-			assert.Equal(t, tt.wantRegistration, model.isRegistration)
+			assert.Equal(t, tt.wantRegistration, model.registration)
 			assert.Equal(t, tt.wantEnter, model.chosen)
 		})
 	}

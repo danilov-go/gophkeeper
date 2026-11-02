@@ -8,11 +8,13 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// MenuOption определяет отдельный пункт меню.
 type MenuOption struct {
 	title string
 	sType models.SecretType
 }
 
+// MenuModel управляет экраном выбора категории секретов.
 type MenuModel struct {
 	options []MenuOption
 	cursor  int
@@ -20,6 +22,7 @@ type MenuModel struct {
 	help    help.Model
 }
 
+// NewMenuModel создает новый экземпляр MenuModel.
 func NewMenuModel() MenuModel {
 	return MenuModel{
 		options: []MenuOption{
@@ -36,6 +39,7 @@ func (m MenuModel) Init() tea.Cmd {
 	return nil
 }
 
+// Update обрабатывает нажатия клавиш для выбора категории секретов.
 func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -55,6 +59,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// View отрисовывает  экран меню.
 func (m MenuModel) View() string {
 	var s strings.Builder
 	s.WriteString("Главное меню\n\n")

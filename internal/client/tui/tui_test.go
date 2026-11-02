@@ -38,7 +38,7 @@ func TestAppModel_Update(t *testing.T) {
 			state: authState,
 			setupModel: func(m *AppModel) {
 				m.authMenu.chosen = true
-				m.authMenu.isRegistration = false
+				m.authMenu.registration = false
 			},
 			msg:      tea.KeyMsg{Type: tea.KeyEnter},
 			expState: authFormState,
@@ -74,7 +74,7 @@ func TestAppModel_Update(t *testing.T) {
 			expState: conflictState,
 		},
 		{
-			name:     "Возврат из conflictState в menuState по Esc",
+			name:     "возврат из conflictState в menuState по Esc",
 			state:    conflictState,
 			msg:      tea.KeyMsg{Type: tea.KeyEsc},
 			expState: menuState,

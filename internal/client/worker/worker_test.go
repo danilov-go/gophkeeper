@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap"
 )
 
 type mockSyncer struct {
@@ -71,8 +71,7 @@ func TestSyncWorker(t *testing.T) {
 			defer cancel()
 			syncer := &mockSyncer{err: tt.expErr}
 			syncCh := make(chan struct{}, 1)
-			logger := zaptest.NewLogger(t)
-			worker := NewSyncWorker(syncer, logger.Sugar(), tt.interval, tt.cooldown, syncCh)
+			worker := NewSyncWorker(syncer, zap.NewNop().Sugar(), tt.interval, tt.cooldown, syncCh)
 			go worker.Run(ctx)
 			if tt.trigger {
 				syncCh <- struct{}{}
@@ -86,6 +85,8 @@ func TestSyncWorker(t *testing.T) {
 			}
 			time.Sleep(tt.sleep)
 			assert.GreaterOrEqual(t, syncer.GetCount(), tt.count)
+			cancel()
+			time.Sleep(5 * time.Millisecond)
 		})
 	}
 }

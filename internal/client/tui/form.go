@@ -13,6 +13,7 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// FormOption определяет параметры и данные отдельного поля ввода в форме.
 type FormOption struct {
 	Label string
 	Data  string
@@ -20,6 +21,7 @@ type FormOption struct {
 	Hide  bool
 }
 
+// FormModel управляет экраном создания и редактирования секретов.
 type FormModel struct {
 	service  SecretService
 	sType    models.SecretType
@@ -31,6 +33,7 @@ type FormModel struct {
 	err      error
 }
 
+// NewFormModel создает новый экземпляр FormModel.
 func NewFormModel(srv SecretService, sType models.SecretType) FormModel {
 	option := newOptions(sType)
 	inputs := newInputs(option)
@@ -43,6 +46,7 @@ func NewFormModel(srv SecretService, sType models.SecretType) FormModel {
 	}
 }
 
+// NewEditForm создает форму редактирования, заполняя поля ввода текущими данными секрета.
 func NewEditForm(srv SecretService, secret models.Secret) FormModel {
 	option := newOptions(secret.Type)
 	inputs := newInputs(option)
@@ -134,10 +138,12 @@ func newInputs(configs []FormOption) []textinput.Model {
 	return inputs
 }
 
+// Init включает мигание курсора в первом активном поле ввода.
 func (m FormModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+// Update обрабатывает перемещение по полям ввода и запускает сохранение формы.
 func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -165,6 +171,7 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// View отрисовывает форму создания или редактирования записи.
 func (m FormModel) View() string {
 	var s strings.Builder
 	if m.secretID != "" {

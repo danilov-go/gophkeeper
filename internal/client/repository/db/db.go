@@ -1,3 +1,4 @@
+// Package db реализует локальное хранилище данных на базе SQLite.
 package db
 
 import (

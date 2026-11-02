@@ -15,7 +15,7 @@ type log interface {
 	Errorw(msg string, keysAndValues ...interface{})
 }
 
-// SyncWorker описывает воркер синхронизации.
+// SyncWorker определяет воркер синхронизации.
 type SyncWorker struct {
 	syncer     Syncer
 	logger     log

@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// AuthFormModel управляет экраном ввода логина и пароля для входа или регистрации.
 type AuthFormModel struct {
 	service      SecretService
 	inputs       []textinput.Model
@@ -19,6 +20,7 @@ type AuthFormModel struct {
 	registration bool
 }
 
+// NewAuthFormModel создает новый экземпляр AuthFormModel.
 func NewAuthFormModel(srv SecretService, registration bool) AuthFormModel {
 	inputs := make([]textinput.Model, 2)
 	inputs[0] = textinput.New()
@@ -37,10 +39,12 @@ func NewAuthFormModel(srv SecretService, registration bool) AuthFormModel {
 	}
 }
 
+// Init включает мигание курсора в текстовых полях ввода формы авторизации.
 func (m AuthFormModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+// Update обрабатывает переключение между полями ввода и отправку формы авторизации.
 func (m AuthFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -71,6 +75,7 @@ func (m AuthFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// View отрисовывает поля логина и пароля, а также ошибки авторизации.
 func (m AuthFormModel) View() string {
 	var s strings.Builder
 	if m.registration {

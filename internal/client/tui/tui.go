@@ -1,3 +1,4 @@
+// package tui реализут текстовый пользовательский интерфейс.
 package tui
 
 import (
@@ -7,8 +8,11 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+// SyncOccurrenceMsg сообщение, уведомляющее о событии синхронизации.
 type SyncOccurrenceMsg struct{}
 
+// SecretService определяет методы для взаимодействия с бизнес логикой.
+//
 //go:generate mockery --name=SecretService --case=underscore --output=./mocks --with-expecter
 type SecretService interface {
 	Register(ctx context.Context, login, password string) error
@@ -36,6 +40,14 @@ const (
 	conflictState
 )
 
+// Bulder хранит информацию о сборке.
+type Bulder struct {
+	Version string
+	Date    string
+	Commit  string
+}
+
+// AppModel определяет корневую модель Bubble Tea приложения.
 type AppModel struct {
 	state          sessionState
 	service        SecretService
@@ -50,12 +62,7 @@ type AppModel struct {
 	bulder         Bulder
 }
 
-type Bulder struct {
-	Version string
-	Date    string
-	Commit  string
-}
-
+// NewAppModel создает новый экземпляр AppModel.
 func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrenceChan <-chan struct{}, bulder Bulder) AppModel {
 	return AppModel{
 		state:          authState,
@@ -69,6 +76,7 @@ func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrenceChan
 	}
 }
 
+// Sync ждет сигнал об успешной синхронизации и передает его в интерфейс.
 func Sync(ch <-chan struct{}) tea.Cmd {
 	return func() tea.Msg {
 		if ch == nil {
@@ -82,6 +90,7 @@ func Sync(ch <-chan struct{}) tea.Cmd {
 	}
 }
 
+// Init запускает стартовый экран и включает фоновое ожидание синхронизации.
 func (m AppModel) Init() tea.Cmd {
 	return tea.Batch(
 		m.authMenu.Init(),
@@ -89,6 +98,7 @@ func (m AppModel) Init() tea.Cmd {
 	)
 }
 
+// Update обрабатывает нажатия клавиш и сигналы синхронизации, переключая экраны приложения.
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		if keyMsg.String() == "ctrl+c" {
@@ -111,7 +121,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.authMenu.chosen {
 			m.authMenu.chosen = false
 			m.state = authFormState
-			m.authForm = NewAuthFormModel(m.service, m.authMenu.isRegistration)
+			m.authForm = NewAuthFormModel(m.service, m.authMenu.registration)
 			return m, m.authForm.Init()
 		}
 		return m, authMenuCmd
@@ -165,7 +175,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case listState:
 		if keyMsg, ok := msg.(tea.KeyMsg); ok {
 			switch keyMsg.String() {
-			case "n", "+":
+			case "n":
 				m.form = NewFormModel(m.service, m.list.sType)
 				m.state = formState
 				return m, m.form.Init()
@@ -177,7 +187,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.form = NewEditForm(m.service, secret)
 				m.state = formState
 				return m, m.form.Init()
-			case "esc", "backspace":
+			case "esc":
 				m.state = menuState
 				return m, nil
 			}
@@ -211,6 +221,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// View отрисовывает интерфейс текущего экрана в зависимости от состояния приложения.
 func (m AppModel) View() string {
 	switch m.state {
 	case authState:

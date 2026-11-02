@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -273,8 +274,10 @@ func TestGRPCHandler_Stream(t *testing.T) {
 	serv.On("GetUserLogin", token).
 		Return(models.AuthUser{ID: user.ID, Login: user.Login}, nil).Once()
 	eventChan := make(chan models.SyncEvent, 1)
-	cancelCalled := false
-	mockCancel := func() { cancelCalled = true }
+	var cancelCalled atomic.Bool
+	mockCancel := func() {
+		cancelCalled.Store(true)
+	}
 	serv.On("Event", mock.Anything, user.ID, deviceID).
 		Return((<-chan models.SyncEvent)(eventChan), mockCancel).Once()
 	const bufSize = 1024 * 1024
@@ -322,6 +325,6 @@ func TestGRPCHandler_Stream(t *testing.T) {
 	require.NotNil(t, resp)
 	assert.Equal(t, "sync", resp.Message)
 	assert.Eventually(t, func() bool {
-		return cancelCalled
+		return cancelCalled.Load()
 	}, 200*time.Millisecond, 5*time.Millisecond)
 }

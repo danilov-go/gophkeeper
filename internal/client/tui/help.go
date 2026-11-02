@@ -25,17 +25,22 @@ type keyMap struct {
 	KeepLocal  key.Binding
 }
 
+// MenuHelp возвращает информацию о клавишах управления для главного меню.
 func (k keyMap) MenuHelp() []key.Binding {
 	return []key.Binding{k.Up, k.Down, k.Enter, k.Logout}
 }
 
+// ListHelp возвращает информацию о клавишах управления для экрана со списками.
 func (k keyMap) ListHelp() []key.Binding {
 	return []key.Binding{k.Up, k.Down, k.Search, k.Delete, k.Export, k.Back}
 }
+
+// ConflictHelp возвращает информацию о клавишах управления для экрана разрешения конфликтов.
 func (k keyMap) ConflictHelp() []key.Binding {
 	return []key.Binding{k.KeepServer, k.KeepLocal, k.Back}
 }
 
+// ShortHelp возвращает информацию о клавишах управления для текущего режима экрана.
 func (k keyMap) ShortHelp() []key.Binding {
 	switch k.mode {
 	case modeList:
@@ -46,6 +51,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 	return k.MenuHelp()
 }
 
+// FullHelp возвращает полную информацию о клавишах управления для интерфейса.
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{k.ListHelp()}
 }

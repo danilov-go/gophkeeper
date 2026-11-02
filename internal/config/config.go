@@ -1,3 +1,4 @@
+// Package config управляет конфигурацией приложения.
 package config
 
 import (
@@ -18,7 +19,7 @@ func (n NetAddress) String() string {
 	return n.Host + ":" + strconv.Itoa(n.Port)
 }
 
-// UnmarshalText десериализует сетевой адрес из текстового формата для библиотеки env.
+// UnmarshalText десериализует сетевой адрес из текстового формата.
 func (n *NetAddress) UnmarshalText(adr []byte) error {
 	return n.Set(string(adr))
 }
