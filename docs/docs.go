@@ -215,7 +215,7 @@ const docTemplate = `{
         },
         "/user/login": {
             "post": {
-                "description": "Проверяет логин и хэш пароля. Возвращает JWT-токен и соль пользователя",
+                "description": "Проверяет логин и хэш пароля. Возвращает JWT-токен в заголовке Authorization и соль пользователя в теле ответа.",
                 "consumes": [
                     "application/json"
                 ],
@@ -239,7 +239,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Соль для дальнейшей аутентификации на клиенте",
+                        "description": "Соль для дальнейшей аутентификации на клиенте\" {header} string Authorization \"Bearer JWT-токен",
                         "schema": {
                             "$ref": "#/definitions/models.AuthSalt"
                         }
@@ -362,7 +362,7 @@ const docTemplate = `{
             "properties": {
                 "hash": {
                     "type": "string",
-                    "example": "password"
+                    "example": "$argon2id$v=19$m=65536,t=3,p=2$J/gjOEdE2a3CReVybKk0KA$w060F3W2YnO2S/tL5v7rSwGgAn9/k08Y6M1o4L3s7uE"
                 },
                 "login": {
                     "type": "string",
@@ -448,7 +448,7 @@ const docTemplate = `{
                 "hash": {
                     "description": "Hash содержит хеш пароля.",
                     "type": "string",
-                    "example": "5e8842c1eee94669bab45164144f4b43477115383659428057c32484ba471410"
+                    "example": "$argon2id$v=19$m=65536,t=3,p=2$J/gjOEdE2a3CReVybKk0KA$w060F3W2YnO2S/tL5v7rSwGgAn9/k08Y6M1o4L3s7uE"
                 },
                 "login": {
                     "description": "Login содержит логин пользователя.",

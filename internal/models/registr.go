@@ -51,7 +51,7 @@ type RegisterUser struct {
 	// Login содержит логин пользователя.
 	Login string `json:"login" example:"user"`
 	// Hash содержит хеш пароля.
-	Hash string `json:"hash" example:"5e8842c1eee94669bab45164144f4b43477115383659428057c32484ba471410"`
+	Hash string `json:"hash" example:"$argon2id$v=19$m=65536,t=3,p=2$J/gjOEdE2a3CReVybKk0KA$w060F3W2YnO2S/tL5v7rSwGgAn9/k08Y6M1o4L3s7uE"`
 	// Salt содержит соль.
 	Salt string `json:"salt" example:"8f3b14427a2e4b41a6e52276537af353"`
 }

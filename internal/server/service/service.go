@@ -80,8 +80,11 @@ func (s *ServerService) Login(ctx context.Context, login, hash string) (string, 
 		return "", "", err
 	}
 	ok, err := crypto.Check(hash, user.Hash)
-	if err != nil || !ok {
+	if err != nil {
 		return "", "", err
+	}
+	if !ok {
+		return "", "", models.ErrUserNotFound
 	}
 	token, err := s.BuildJWTString(user.ID, login)
 	if err != nil {
