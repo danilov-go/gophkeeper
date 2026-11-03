@@ -112,9 +112,6 @@ func (c *ConfigServer) Validate() error {
 	if c.Protocol != "grpc" && c.Protocol != "https" {
 		return errors.New("неверный протокол обмена")
 	}
-	if c.DatabaseDSN == "" {
-		return errors.New("строка подключения к базе данных не может быть пустой")
-	}
 	if c.Token == "" {
 		return errors.New("токен не может быть пустым")
 	}

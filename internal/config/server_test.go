@@ -152,13 +152,6 @@ func TestConfigServer_Validate(t *testing.T) {
 			expErr: "неверный протокол обмена",
 		},
 		{
-			name: "пустая строка подключения к БД",
-			set: func(cfg *ConfigServer) {
-				cfg.DatabaseDSN = ""
-			},
-			expErr: "строка подключения к базе данных не может быть пустой",
-		},
-		{
 			name: "пустой токен",
 			set: func(cfg *ConfigServer) {
 				cfg.Token = ""

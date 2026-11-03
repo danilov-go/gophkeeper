@@ -36,7 +36,7 @@ func TestMemStorage_SaveConflict(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			if tt.cancelContext {
 				var cancel context.CancelFunc
@@ -93,7 +93,7 @@ func TestMemStorage_GetConflicts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			for _, s := range tt.setupSecrets {
 				err := storage.SaveConflict(ctx, s)
@@ -154,7 +154,7 @@ func TestMemStorage_DeleteConflict(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			if tt.setupSecret {
 				err := storage.SaveConflict(ctx, models.CipherData{ID: secretID, Type: models.TypeCard})

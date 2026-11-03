@@ -8,19 +8,19 @@ import (
 // CipherData содержит зашифрованные данных для передачи.
 type CipherData struct {
 	// ID содержит уникальный идентификатор секрета.
-	ID string `json:"id,omitempty"`
+	ID string `json:"id,omitempty" example:"8f3b1442-7a2e-4b41-a6e5-2276537af353"`
 	// UserID содержит идентификатор владельца секрета.
 	UserID int `json:"-"`
 	// Type определяет тип секретных данных
-	Type SecretType `json:"type"`
+	Type SecretType `json:"type" example:"card" `
 	// Cipher определяет зашифрованное содержимое секрета.
-	Cipher []byte `json:"cipher"`
+	Cipher []byte `json:"cipher" swaggertype:"string" example:"eyJudW1iZXIiOjQyNDIsImRhdGUiOiIxMi8yNiIsInVzZXJfbmFtZSI6IlVzZXJOYW1lIiwia2V5IjoiMTIzIn0="`
 	// UpdatedAt содержит время последнего обновления записи.
-	UpdatedAt time.Time `json:"updated_at"`
+	UpdatedAt time.Time `json:"updated_at" example:"2026-11-03T15:00:00Z"`
 	// Version содержит текущую версию секрета.
-	Version int `json:"version"`
+	Version int `json:"version" example:"1"`
 	// Deleted содержит флаг, указывающий на удаление секрета.
-	Deleted bool `json:"deleted"`
+	Deleted bool `json:"deleted" example:"false"`
 }
 
 // LoginPassword определяет пары логин/пароль.

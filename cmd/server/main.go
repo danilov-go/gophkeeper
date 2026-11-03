@@ -2,24 +2,39 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"os/signal"
 	"syscall"
 
+	_ "github.com/danilov-go/gophkeeper/docs"
 	"github.com/danilov-go/gophkeeper/internal/config"
 	"github.com/danilov-go/gophkeeper/internal/logger"
 	"github.com/danilov-go/gophkeeper/internal/proto"
 	"github.com/danilov-go/gophkeeper/internal/server/handler"
 	"github.com/danilov-go/gophkeeper/internal/server/repository/db"
+	"github.com/danilov-go/gophkeeper/internal/server/repository/memory"
 	"github.com/danilov-go/gophkeeper/internal/server/service"
 	"github.com/danilov-go/gophkeeper/internal/server/sync"
 	"github.com/danilov-go/gophkeeper/internal/server/transport"
 	"github.com/danilov-go/gophkeeper/internal/strategy"
 	"github.com/go-chi/chi"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip"
 )
 
+// @title           GophKeeper API
+// @version         1.0.0
+// @description     API для управления пользователями и синхронизации событий.
+//
+// @securityDefinitions.apiKey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 Введите токен в формате: Bearer <jwt_token>
+//
+// @host            localhost:8080
+// @basePath
 func main() {
 	if err := logger.Initialize("info"); err != nil {
 		panic(err)
@@ -32,12 +47,18 @@ func main() {
 		logger.Log.Sugar().Fatal(err)
 	}
 	conflict := strategy.NewServerStrategy()
-	db, err := db.InitDB(cfg.DatabaseDSN, conflict)
-	if err != nil {
-		logger.Log.Sugar().Fatalw("ошибка инициализации базы данных", "error", err)
+	var storage service.Storage
+	if cfg.ConfigPath != "" {
+		db, err := db.InitDB(cfg.DatabaseDSN, conflict)
+		if err != nil {
+			logger.Log.Sugar().Fatalw("ошибка инициализации базы данных", "error", err)
+		}
+		storage = db
+	} else {
+		storage = memory.NewMemStorage(conflict)
 	}
 	notifier := sync.NewSyncNotifier()
-	srv := service.NewServerService(db, cfg.Token, notifier)
+	srv := service.NewServerService(storage, cfg.Token, notifier)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer stop()
 	g, gCtx := errgroup.WithContext(ctx)
@@ -58,6 +79,10 @@ func main() {
 	} else {
 		h := handler.NewHandlers(logger.Log.Sugar(), srv)
 		r := chi.NewRouter()
+		r.Get("/swagger/*", httpSwagger.WrapHandler)
+		r.Get("/api-docs", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/swagger/index.html", http.StatusMovedPermanently)
+		}))
 		r.Route("/user", func(r chi.Router) {
 			r.Post("/register", h.RegisterUser())
 			r.Post("/login", h.LoginUser())
@@ -72,7 +97,7 @@ func main() {
 		})
 		serv := transport.New(cfg.Net.String(), logger.Log.Sugar(), r, ctx, cfg.PathTLSCert, cfg.PathTLSKey)
 		g.Go(func() error {
-			logger.Log.Sugar().Info("Сервер запущен по протоколу HTTP/SSE на ", cfg.Net.String())
+			logger.Log.Sugar().Info("Сервер запущен по протоколу HTTPS на ", cfg.Net.String())
 			return serv.Run()
 		})
 		g.Go(func() error {

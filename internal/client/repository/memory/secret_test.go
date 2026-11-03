@@ -49,7 +49,7 @@ func TestMemStorage_SaveSecret(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			if tt.cancelContext {
 				var cancel context.CancelFunc
@@ -109,7 +109,7 @@ func TestMemStorage_GetSecret(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			if tt.setupSecret {
 				_, err := storage.SaveSecret(ctx, models.CipherData{ID: secretID, Type: models.TypeBinary})
@@ -166,7 +166,7 @@ func TestMemStorage_GetAllSecret(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			for _, s := range tt.setupData {
 				_, err := storage.SaveSecret(ctx, s)
@@ -219,7 +219,7 @@ func TestMemStorage_UpdateSecret(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			if tt.setupSecret {
 				_, err := storage.SaveSecret(ctx, models.CipherData{ID: secretID, Type: models.TypeCard, Cipher: []byte("secret")})
@@ -279,7 +279,7 @@ func TestMemStorage_DeleteSecret(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 
 			if tt.setupSecret {

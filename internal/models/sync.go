@@ -16,9 +16,9 @@ const (
 // Changelog содержит запись в журнале изменений конкретного секрета.
 type Changelog struct {
 	// ID содержит идентификатор записи.
-	ID int `json:"id"`
+	ID int `json:"id" example:"15"`
 	// SecretID содержит строковый идентификатор секрета.
-	SecretID string `json:"secret_id"`
+	SecretID string `json:"secret_id" example:"8f3b1442-7a2e-4b41-a6e5-2276537af353"`
 	// Secret содержит зашифрованные данные секрета.
 	Secret CipherData `json:"secret"`
 }
@@ -26,9 +26,9 @@ type Changelog struct {
 // VersionTime содержит номер версии и время последнего обновления секрета.
 type VersionTime struct {
 	// Version содержит номер версии.
-	Version int `json:"version"`
+	Version int `json:"version" example:"1"`
 	// UpdatedAt содержит время последнего обновления.
-	UpdatedAt time.Time `json:"updated_at"`
+	UpdatedAt time.Time `json:"updated_at" example:"2026-11-03T15:00:00Z"`
 }
 
 // SecretVersions содержит карту версий секретов.
@@ -40,11 +40,11 @@ type Changelogs []Changelog
 // SyncEvent содержит данные о событии синхронизации для уведомления устройств.
 type SyncEvent struct {
 	// UserID содержит идентификатор пользователя.
-	UserID int
+	UserID int `example:"1"`
 	// DeviceID содержит идентификатор устройства пользователя.
-	DeviceID string
+	DeviceID string `example:"device1"`
 	// Message содержит сообщение события.
-	Message string
+	Message string `example:"sync"`
 }
 
 // Conflict содержит информацию о конфликтующих версиях данных между клиентом и сервером.

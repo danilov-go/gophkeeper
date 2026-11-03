@@ -20,7 +20,7 @@ type MemStorage struct {
 }
 
 // InitMemStorage создает новый экземпляр MemStorage.
-func InitMemStorage() *MemStorage {
+func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		nextID:    1,
 		secrets:   make(map[string]models.CipherData),

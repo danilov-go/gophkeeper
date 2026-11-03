@@ -49,17 +49,17 @@ type User struct {
 // RegisterUser содержит данные для регистрации нового пользователя.
 type RegisterUser struct {
 	// Login содержит логин пользователя.
-	Login string `json:"login"`
+	Login string `json:"login" example:"user"`
 	// Hash содержит хеш пароля.
-	Hash string `json:"hash"`
+	Hash string `json:"hash" example:"5e8842c1eee94669bab45164144f4b43477115383659428057c32484ba471410"`
 	// Salt содержит соль.
-	Salt string `json:"salt"`
+	Salt string `json:"salt" example:"8f3b14427a2e4b41a6e52276537af353"`
 }
 
 // AuthSalt содержит соль пользователя при аутентификации.
 type AuthSalt struct {
 	// Salt содержит соль.
-	Salt string `json:"salt"`
+	Salt string `json:"salt" example:"8f3b14427a2e4b41a6e52276537af353"`
 }
 
 // LocalUser содержит локальные данные авторизации пользователя.

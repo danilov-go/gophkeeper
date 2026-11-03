@@ -49,7 +49,7 @@ func TestMemStorage_SaveUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			if tt.cancelContext {
 				var cancel context.CancelFunc
@@ -111,7 +111,7 @@ func TestMemStorage_GetUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 
 			if tt.setupUser {

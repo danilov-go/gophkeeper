@@ -12,14 +12,15 @@ import (
 // LoginHandlerFunc определяет тип функции-обработчика для запросов, требующих авторизации.
 type LoginHandlerFunc func(w http.ResponseWriter, r *http.Request, user models.AuthUser)
 
-type loginPassword struct {
-	Login string `json:"login"`
-	Hash  string `json:"hash"`
+// LoginPassword используется для десериализации учетных данных при входе.
+type LoginPassword struct {
+	Login string `json:"login" example:"user"`
+	Hash  string `json:"hash" example:"password"`
 }
 
 func decode[T any](w http.ResponseWriter, r *http.Request) (T, error) {
 	var body T
-	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+	r.Body = http.MaxBytesReader(w, r.Body, 64*1024*1024)
 	defer r.Body.Close()
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -29,6 +30,18 @@ func decode[T any](w http.ResponseWriter, r *http.Request) (T, error) {
 }
 
 // RegisterUser возвращает обработчик для регистрации нового пользователя.
+//
+// @Summary      Регистрация нового пользователя
+// @Description  Создает новый аккаунт пользователя и возвращает токен авторизации
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        body  body      models.RegisterUser  true  "Данные регистрации (login, hash, salt)"
+// @Success      200   "Успешная регистрация, токен возвращается в заголовке Authorization"
+// @Failure      400   {string}  string "Неверные входные данные или пустой логин/пароль"
+// @Failure      409   {string}  string "Логин уже занят другим пользователем"
+// @Failure      500   {string}  string "Внутренняя ошибка сервера при обработке регистрации"
+// @Router       /user/register [post]
 func (h *Handler) RegisterUser() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -59,10 +72,22 @@ func (h *Handler) RegisterUser() http.HandlerFunc {
 }
 
 // LoginUser возвращает обработчик для аутентификации существующего пользователя.
+//
+// @Summary      Аутентификация пользователя
+// @Description  Проверяет логин и хэш пароля. Возвращает JWT-токен и соль пользователя
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        body  body      LoginPassword  true  "Логин и хеш пароля"
+// @Success      200   {object}  models.AuthSalt        "Соль для дальнейшей аутентификации на клиенте"
+// @Failure      400   {string}  string   "Неверные данные или пустые обязательные поля"
+// @Failure      401   {string}  string   "Пользователь не найден или неверный пароль"
+// @Failure      500   {string}  string   "Внутренняя ошибка сервера"
+// @Router       /user/login [post]
 func (h *Handler) LoginUser() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		user, err := decode[loginPassword](w, r)
+		user, err := decode[LoginPassword](w, r)
 		if err != nil {
 			h.logger.Errorw("ошибка десериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -73,9 +98,10 @@ func (h *Handler) LoginUser() http.HandlerFunc {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-
 		signedToken, salt, err := h.service.Login(ctx, user.Login, user.Hash)
 		if err != nil {
+			h.logger.Errorw("ошибка в процессе входа пользователя", "error", err, "login", user.Login)
+
 			if errors.Is(err, models.ErrUserNotFound) {
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
@@ -99,6 +125,16 @@ func (h *Handler) LoginUser() http.HandlerFunc {
 }
 
 // GetSalt возвращает соль пользователя по его логину для последующей аутентификации.
+//
+// @Summary      Получить соль пользователя по логину
+// @Description  Используется клиентом перед авторизацией, чтобы узнать соль пользователя
+// @Tags         user
+// @Produce      json
+// @Param        login  query     string                true  "Логин пользователя"
+// @Success      200    {object}  models.AuthSalt       "Соль пользователя"
+// @Failure      400    {string}  string "Отсутствует или пустой query-параметр login"
+// @Failure      500    {string}  string  "Внутренняя ошибка сервера"
+// @Router       /user/salt [get]
 func (h *Handler) GetSalt() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

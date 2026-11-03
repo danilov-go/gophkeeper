@@ -46,7 +46,7 @@ func TestMemStorage_GetVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			for _, s := range tt.setupSecrets {
 				_, err := storage.SaveSecret(ctx, s)
@@ -75,7 +75,7 @@ func TestMemStorage_GetVersion(t *testing.T) {
 }
 
 func TestMemStorage_Changelog(t *testing.T) {
-	storage := memory.InitMemStorage()
+	storage := memory.NewMemStorage()
 	ctx := t.Context()
 	changelogs, err := storage.GetChangelog()
 	assert.NoError(t, err)
@@ -134,7 +134,7 @@ func TestMemStorage_SyncUpdate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := memory.InitMemStorage()
+			storage := memory.NewMemStorage()
 			ctx := t.Context()
 			if tt.secret.ID != "" {
 				_, err := storage.SaveSecret(ctx, tt.secret)

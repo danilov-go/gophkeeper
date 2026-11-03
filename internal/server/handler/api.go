@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -11,6 +10,22 @@ import (
 )
 
 // PullHandler принимает версии от клиента и возвращает секреты, которые необходимо обновить.
+//
+// @Summary      Получить секреты, требующие обновления
+// @Description  Принимает версии от клиента и возвращает секреты, которые необходимо обновить
+// @Tags         secrets
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        device-id  header    string                 true  "Идентификатор устройства"
+// @Param        body       body      models.SecretVersions  true  "Версии секретов на клиенте"
+// @Success      200        {array}   models.CipherData      "Список зашифрованных секретов"
+// @Success      204        "Нет секретов для обновления"
+// @Failure      400        {string}  string                 "Невалидный JSON"
+// @Failure      401        {string}  string                 "Неавторизованный доступ"
+// @Failure      415        {string}  string                 "Неверный Content-Type"
+// @Failure      500        {string}  string                 "Внутренняя ошибка сервиса"
+// @Router       /api/pull [post]
 func (h *Handler) PullHandler() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user models.AuthUser) {
 		ctx := r.Context()
@@ -19,15 +34,7 @@ func (h *Handler) PullHandler() LoginHandlerFunc {
 			http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 			return
 		}
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			h.logger.Errorw("ошибка чтения body", "error", err)
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		defer r.Body.Close()
-		var version models.SecretVersions
-		err = json.Unmarshal(body, &version)
+		version, err := decode[models.SecretVersions](w, r)
 		if err != nil {
 			h.logger.Errorw("ошибка десериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -56,6 +63,21 @@ func (h *Handler) PullHandler() LoginHandlerFunc {
 }
 
 // PushHandler принимает журнал изменений от клиента и применяет его на сервере.
+//
+// @Summary      Отправить журнал изменений
+// @Description  Принимает журнал изменений от клиента и применяет его на сервере
+// @Tags         secrets
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        device-id  header    string             true  "Уникальный идентификатор устройства клиента"
+// @Param        body       body      models.Changelogs  true  "Журнал изменений секретов"
+// @Success      200        "Изменения успешно применены"
+// @Failure      400        {string}  string                 "Невалидный JSON или отсутствует заголовок device-id"
+// @Failure      401        {string}  string                 "Неавторизованный доступ"
+// @Failure      415        {string}  string                 "Неверный Content-Type"
+// @Failure      500        {string}  string                 "Внутренняя ошибка сервиса"
+// @Router       /api/push [post]
 func (h *Handler) PushHandler() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user models.AuthUser) {
 		ctx := r.Context()
@@ -64,15 +86,7 @@ func (h *Handler) PushHandler() LoginHandlerFunc {
 			http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
 			return
 		}
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			h.logger.Errorw("ошибка чтения body", "error", err)
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		defer r.Body.Close()
-		var changelogs models.Changelogs
-		err = json.Unmarshal(body, &changelogs)
+		changelogs, err := decode[models.Changelogs](w, r)
 		if err != nil {
 			h.logger.Errorw("ошибка десериализации", "error", err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -95,6 +109,18 @@ func (h *Handler) PushHandler() LoginHandlerFunc {
 }
 
 // StreamHandler отправляет клиенту события синхронизации.
+//
+// @Summary      Отправить событие синхронизации
+// @Description  Отправляет клиенту события синхронизации.
+// @Tags         sync
+// @Produce      text/event-stream
+// @Security     BearerAuth
+// @Param        device-id  header    string  true  "Идентификатор устройства"
+// @Success      200        {string}  string        "Поток событий в формате SSE (data: message\n\n)"
+// @Failure      400        {string}  string        "Отсутствует заголовок device-id"
+// @Failure      401        {string}  string        "Неавторизованный доступ"
+// @Failure      500        {string}  string        "Внутренняя ошибка"
+// @Router       /api/event [get]
 func (h *Handler) StreamHandler() LoginHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, user models.AuthUser) {
 		ctx := r.Context()
