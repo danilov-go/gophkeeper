@@ -19,7 +19,7 @@ type MemStorage struct {
 	conflicts map[string]models.CipherData
 }
 
-// InitMemStorage создает новый экземпляр MemStorage.
+// NewMemStorage создает новый экземпляр MemStorage.
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		nextID:    1,

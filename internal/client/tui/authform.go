@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -125,11 +126,13 @@ func (m AuthFormModel) submitCmd() tea.Cmd {
 		if login == "" || password == "" {
 			return errors.New("поля не могут быть пустыми")
 		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		var err error
 		if m.registration {
-			err = m.service.Register(context.Background(), login, password)
+			err = m.service.Register(ctx, login, password)
 		} else {
-			err = m.service.Login(context.Background(), login, password)
+			err = m.service.Login(ctx, login, password)
 		}
 		if err != nil {
 			return err

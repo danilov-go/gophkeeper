@@ -4,6 +4,8 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -46,4 +48,11 @@ func (n *NetAddress) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	return n.Set(str)
+}
+
+// PrintBuild выводит в консоль информацию о текущей сборке приложения.
+func PrintBuild(w io.Writer, version, date, commit string) {
+	fmt.Fprintf(w, "Build version: %s\n", version)
+	fmt.Fprintf(w, "Build date: %s\n", date)
+	fmt.Fprintf(w, "Build commit: %s\n", commit)
 }

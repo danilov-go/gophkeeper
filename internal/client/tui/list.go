@@ -30,7 +30,7 @@ type ListModel struct {
 	cursor    int
 	err       error
 	statusMsg string
-	tikerTOTP int
+	tikerOTP  int
 	search    textinput.Model
 	searching bool
 	help      help.Model
@@ -45,7 +45,7 @@ func NewListModel(srv SecretService, sType models.SecretType) ListModel {
 		service:   srv,
 		sType:     sType,
 		secrets:   []models.Secret{},
-		tikerTOTP: int(30 - (time.Now().Unix() % 30)),
+		tikerOTP:  int(30 - (time.Now().Unix() % 30)),
 		search:    ti,
 		searching: false,
 		help:      help.New(),
@@ -56,7 +56,9 @@ func NewListModel(srv SecretService, sType models.SecretType) ListModel {
 func (m ListModel) Init() tea.Cmd {
 	return tea.Batch(
 		func() tea.Msg {
-			data, err := m.service.GetAll(context.Background(), m.sType)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			data, err := m.service.GetAll(ctx, m.sType)
 			if err != nil {
 				return err
 			}
@@ -91,7 +93,7 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	switch msg := msg.(type) {
 	case MsgOTP:
-		m.tikerTOTP = int(30 - (time.Now().Unix() % 30))
+		m.tikerOTP = int(30 - (time.Now().Unix() % 30))
 		return m, Tick()
 	case SyncOccurrenceMsg:
 		m.statusMsg = "Данные обновлены"
@@ -119,15 +121,10 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			secret := secrets[m.cursor]
-			err := m.service.Delete(context.Background(), secret.ID)
-			if err != nil {
-				m.err = err
-				return m, nil
-			}
 			if m.cursor > 0 && m.cursor == len(secrets)-1 {
 				m.cursor--
 			}
-			return m, m.Init()
+			return m, m.delete(secret.ID)
 		case "s":
 			if len(secrets) == 0 || m.sType != models.TypeBinary {
 				return m, nil
@@ -147,8 +144,21 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MsgList:
 		m.statusMsg = msg.Text
 		m.err = nil
+		return m, m.Init()
 	}
 	return m, nil
+}
+
+func (m ListModel) delete(id string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		err := m.service.Delete(ctx, id)
+		if err != nil {
+			return err
+		}
+		return MsgList{Text: "Запись успешно удалена"}
+	}
 }
 
 // View отрисовывает список секретов, форматируя строки под каждый тип данных.
@@ -189,7 +199,7 @@ func (m ListModel) View() string {
 						otpCode = "Invalid Secret"
 					}
 				}
-				s.WriteString(fmt.Sprintf("%s [ID: %s] Аккаунт: %s (%s) | 2FA: %s, Время действия TOTP: %d\n", cursor, secret.ID, v.Name, v.URL, otpCode, m.tikerTOTP))
+				s.WriteString(fmt.Sprintf("%s [ID: %s] Аккаунт: %s (%s) | 2FA: %s, Время действия TOTP: %d\n", cursor, secret.ID, v.Name, v.URL, otpCode, m.tikerOTP))
 			case *models.MetaText:
 				runes := []rune(v.Name)
 				preview := string(runes)
@@ -205,7 +215,11 @@ func (m ListModel) View() string {
 		}
 	}
 	listKeys := keys
-	listKeys.mode = modeList
+	if m.sType == models.TypeBinary {
+		listKeys.mode = modeBinary
+	} else {
+		listKeys.mode = modeList
+	}
 	s.WriteString("\n" + m.help.View(listKeys) + "\n")
 	return s.String()
 }

@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danilov-go/gophkeeper/internal/models"
@@ -31,6 +33,7 @@ type FormModel struct {
 	focus    int
 	saved    bool
 	err      error
+	help     help.Model
 }
 
 // NewFormModel создает новый экземпляр FormModel.
@@ -43,6 +46,7 @@ func NewFormModel(srv SecretService, sType models.SecretType) FormModel {
 		secretID: "",
 		option:   option,
 		inputs:   inputs,
+		help:     help.New(),
 	}
 }
 
@@ -86,6 +90,7 @@ func NewEditForm(srv SecretService, secret models.Secret) FormModel {
 		secretID: secret.ID,
 		option:   option,
 		inputs:   inputs,
+		help:     help.New(),
 	}
 }
 
@@ -93,11 +98,11 @@ func newOptions(sType models.SecretType) []FormOption {
 	switch sType {
 	case models.TypeCard:
 		return []FormOption{
-			{Label: "Описание", Data: "Введите описание ...", Limit: 50},
-			{Label: "Название банка", Data: "Сбербанк", Limit: 50},
+			{Label: "Описание", Data: "Введите описание...", Limit: 50},
+			{Label: "Название банка", Data: "Введите название банка...", Limit: 50},
 			{Label: "Номер карты", Data: "XXXX XXXX XXXX XXXX", Limit: 19},
 			{Label: "Срок действия", Data: "MM/YY", Limit: 5},
-			{Label: "Владелец", Data: "IVAN DANILOV", Limit: 30},
+			{Label: "Владелец", Data: "Введите имя владельца...", Limit: 30},
 			{Label: "Код (CVV)", Data: "•••", Limit: 4, Hide: true},
 		}
 	case models.TypeLoginPassword:
@@ -148,6 +153,17 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "ctrl+r":
+			for i, opt := range m.option {
+				if opt.Hide {
+					if m.inputs[i].EchoMode == textinput.EchoPassword {
+						m.inputs[i].EchoMode = textinput.EchoNormal
+					} else {
+						m.inputs[i].EchoMode = textinput.EchoPassword
+					}
+				}
+			}
+			return m, nil
 		case "down", "enter":
 			if m.focus == len(m.inputs)-1 {
 				return m, m.saveCmd()
@@ -193,6 +209,9 @@ func (m FormModel) View() string {
 		}
 		s.WriteString(fmt.Sprintf(" %s: %s\n", m.option[i].Label, m.inputs[i].View()))
 	}
+	formKeys := keys
+	formKeys.mode = modeForm
+	s.WriteString("\n" + m.help.View(formKeys) + "\n")
 	return s.String()
 }
 
@@ -287,11 +306,17 @@ func (m FormModel) saveCmd() tea.Cmd {
 				Data: dataFile,
 			}
 		}
+		timeout := 10 * time.Second
+		if m.sType == models.TypeBinary {
+			timeout = 5 * time.Minute
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 		var err error
 		if m.secretID != "" {
-			err = m.service.Update(context.Background(), m.secretID, meta, data)
+			err = m.service.Update(ctx, m.secretID, meta, data)
 		} else {
-			_, err = m.service.Save(context.Background(), meta, data)
+			_, err = m.service.Save(ctx, meta, data)
 		}
 		if err != nil {
 			return err

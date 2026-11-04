@@ -30,3 +30,4 @@ internal/proto/*_grpc.pb.go
 certs/
 *.crt
 mocks/
+/docs/

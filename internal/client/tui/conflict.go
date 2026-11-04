@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 
@@ -31,7 +32,9 @@ func NewConflictModel(srv SecretService) ConflictModel {
 // Init запускает загрузку списка конфликтов синхронизации.
 func (m ConflictModel) Init() tea.Cmd {
 	return func() tea.Msg {
-		list, err := m.service.GetConflicts(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		list, err := m.service.GetConflicts(ctx)
 		if err != nil {
 			return err
 		}
@@ -49,6 +52,10 @@ func (m ConflictModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case error:
 		m.err = msg
 		return m, nil
+	case string:
+		if msg == "conflict_resolved" {
+			return m, m.Init()
+		}
 	case tea.KeyMsg:
 		if msg.String() == "esc" {
 			return m, nil
@@ -56,7 +63,6 @@ func (m ConflictModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.conflicts) == 0 {
 			return m, nil
 		}
-
 		switch msg.String() {
 		case "up":
 			if m.cursor > 0 {
@@ -67,16 +73,27 @@ func (m ConflictModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 		case "1":
-			current := m.conflicts[m.cursor]
-			_ = m.service.FixConflict(context.Background(), current.ID, true)
-			return m, m.Init()
+			conflict := m.conflicts[m.cursor]
+			return m, m.fixConflict(conflict.ID, true)
+
 		case "2":
-			current := m.conflicts[m.cursor]
-			_ = m.service.FixConflict(context.Background(), current.ID, false)
-			return m, m.Init()
+			conflict := m.conflicts[m.cursor]
+			return m, m.fixConflict(conflict.ID, false)
 		}
 	}
 	return m, nil
+}
+
+func (m ConflictModel) fixConflict(id string, keepServer bool) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		err := m.service.FixConflict(ctx, id, keepServer)
+		if err != nil {
+			return err
+		}
+		return "conflict_resolved"
+	}
 }
 
 // View отрисовывает список конфликтов.

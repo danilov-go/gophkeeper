@@ -52,7 +52,7 @@ func (c *ConfigClient) Get() error {
 	v.SetDefault("protocol", "https")
 	v.SetDefault("send_interval", 5*time.Minute)
 	v.SetDefault("cooldown", 5*time.Second)
-	v.SetDefault("PathDB", "client.db")
+	v.SetDefault("path_db", "client.db")
 	v.SetEnvPrefix("client")
 	v.AutomaticEnv()
 	if err := v.BindPFlag("address", pflag.CommandLine.Lookup("address")); err != nil {

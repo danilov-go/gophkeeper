@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -80,4 +81,9 @@ func main() {
 	if _, err := p.Run(); err != nil {
 		logger.Log.Sugar().Fatalw("ошибка интерфейса", "error", err)
 	}
+	defer func() {
+		if closer, ok := send.(io.Closer); ok {
+			_ = closer.Close()
+		}
+	}()
 }

@@ -90,7 +90,7 @@ func TestConflictModel_Update(t *testing.T) {
 			msg:        tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("1")},
 			setupMock: func(s *mocks.SecretService) {
 				s.On("FixConflict", mock.Anything, conflict1, true).Return(nil).Once()
-				s.On("GetConflicts", mock.Anything).Return(conflicts, nil).Maybe()
+				s.On("GetConflicts", mock.Anything).Return(conflicts, nil).Once()
 			},
 			cursor:  0,
 			wantCmd: true,
@@ -102,9 +102,9 @@ func TestConflictModel_Update(t *testing.T) {
 			msg:        tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("2")},
 			setupMock: func(s *mocks.SecretService) {
 				s.On("FixConflict", mock.Anything, conflict2, false).Return(nil).Once()
-				s.On("GetConflicts", mock.Anything).Return(conflicts, nil).Maybe()
+				s.On("GetConflicts", mock.Anything).Return(conflicts, nil).Once()
 			},
-			cursor:  1,
+			cursor:  0,
 			wantCmd: true,
 		},
 	}
@@ -126,14 +126,20 @@ func TestConflictModel_Update(t *testing.T) {
 				}
 			}
 			updatedModel, cmd := m.Update(msg)
-			model := updatedModel.(ConflictModel)
-			assert.Equal(t, tt.cursor, model.cursor)
-			assert.Equal(t, tt.expErr, model.err)
 			if tt.wantCmd {
 				assert.NotNil(t, cmd)
+				resMsg := cmd()
+				updatedModel, cmd = updatedModel.Update(resMsg)
+				if cmd != nil {
+					getConflictsMsg := cmd()
+					updatedModel, _ = updatedModel.Update(getConflictsMsg)
+				}
 			} else {
 				assert.Nil(t, cmd)
 			}
+			model := updatedModel.(ConflictModel)
+			assert.Equal(t, tt.cursor, model.cursor)
+			assert.Equal(t, tt.expErr, model.err)
 		})
 	}
 }

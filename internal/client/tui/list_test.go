@@ -82,7 +82,7 @@ func TestListModel_Update(t *testing.T) {
 		{
 			name:       "нажатие d",
 			sType:      models.TypeText,
-			initCursor: 1,
+			initCursor: 0,
 			secrets:    secrets,
 			msg:        tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")},
 			setupMock: func(s *mocks.SecretService) {
@@ -90,6 +90,7 @@ func TestListModel_Update(t *testing.T) {
 				s.On("GetAll", mock.Anything, models.SecretType("text")).Return([]models.Secret{}, nil).Maybe()
 			},
 			cursor:      0,
+			expMsg:      "Запись успешно удалена",
 			wantInitCmd: true,
 		},
 		{
@@ -120,7 +121,7 @@ func TestListModel_Update(t *testing.T) {
 			}
 			m := NewListModel(service, tt.sType)
 			m.secrets = tt.secrets
-			m.cursor = tt.cursor
+			m.cursor = tt.initCursor
 			msg := tt.msg
 			if key, ok := tt.msg.(tea.KeyMsg); ok {
 				if string(key.Runes) == "up" || key.Type == tea.KeyUp {
@@ -130,12 +131,21 @@ func TestListModel_Update(t *testing.T) {
 				}
 			}
 			updatedModel, cmd := m.Update(msg)
+			hadCmd := cmd != nil
+			if cmd != nil {
+				resMsg := cmd()
+				updatedModel, cmd = updatedModel.Update(resMsg)
+				if cmd != nil {
+					nextMsg := cmd()
+					updatedModel, _ = updatedModel.Update(nextMsg)
+				}
+			}
 			model := updatedModel.(ListModel)
 			assert.Equal(t, tt.cursor, model.cursor)
 			assert.Equal(t, tt.expMsg, model.statusMsg)
 			assert.Equal(t, tt.expErr, model.err)
 			if tt.wantInitCmd {
-				assert.NotNil(t, cmd)
+				assert.True(t, hadCmd)
 			}
 		})
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -24,18 +25,23 @@ import (
 	_ "google.golang.org/grpc/encoding/gzip"
 )
 
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
+)
+
 // @title           GophKeeper API
 // @version         1.0.0
 // @description     API для управления пользователями и синхронизации событий.
-//
 // @securityDefinitions.apiKey  BearerAuth
 // @in                          header
 // @name                        Authorization
 // @description                 Введите токен в формате: Bearer <jwt_token>
-//
 // @host            localhost:8080
 // @basePath
 func main() {
+	config.PrintBuild(os.Stdout, buildVersion, buildDate, buildCommit)
 	if err := logger.Initialize("info"); err != nil {
 		panic(err)
 	}
@@ -48,7 +54,7 @@ func main() {
 	}
 	conflict := strategy.NewServerStrategy()
 	var storage service.Storage
-	if cfg.ConfigPath != "" {
+	if cfg.DatabaseDSN != "" {
 		db, err := db.InitDB(cfg.DatabaseDSN, conflict)
 		if err != nil {
 			logger.Log.Sugar().Fatalw("ошибка инициализации базы данных", "error", err)
