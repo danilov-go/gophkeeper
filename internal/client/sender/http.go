@@ -158,7 +158,7 @@ func (s *HTTPSender) Sync(ctx context.Context, versions map[string]models.Versio
 	token := s.token
 	s.mu.RUnlock()
 	if token == "" {
-		return nil, errors.New("клиент не авторизован")
+		return nil, models.ErrNoToken
 	}
 	cipherData, err := s.pull(ctx, versions, token)
 	if err != nil {
@@ -183,6 +183,10 @@ func (s *HTTPSender) pull(ctx context.Context, versions map[string]models.Versio
 	if err != nil {
 		s.logger.Errorw("ошибка при выполнении запроса", "error", err)
 		return nil, err
+	}
+	if resp.StatusCode() == http.StatusUnauthorized {
+		s.Logout()
+		return nil, models.ErrClientUnauthorized
 	}
 	if resp.StatusCode() == http.StatusOK {
 		var cipherData []models.CipherData
@@ -215,11 +219,14 @@ func (s *HTTPSender) push(ctx context.Context, changelogs []models.Changelog, to
 		s.logger.Errorw("ошибка при выполнении запроса", "error", err)
 		return err
 	}
+	if resp.StatusCode() == http.StatusUnauthorized {
+		s.Logout()
+		return models.ErrClientUnauthorized
+	}
 	if resp.IsError() {
 		s.logger.Errorw("сервер вернул ошибку", "status", resp.Status())
 		return fmt.Errorf("статус ответа от сервера: %s", resp.Status())
 	}
-
 	return nil
 }
 

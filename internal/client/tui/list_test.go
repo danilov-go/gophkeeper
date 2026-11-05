@@ -215,7 +215,7 @@ func TestListModel_View(t *testing.T) {
 					Meta: &models.MetaCard{Name: "Name", BankName: "BankName"},
 				},
 			},
-			contains: []string{"> [ID: secretID] Карта: Name [BankName]"},
+			contains: []string{"> Карта: Name [BankName]"},
 		},
 		{
 			name:  "отображение списка TypeLoginPassword с TOTP",
@@ -228,7 +228,7 @@ func TestListModel_View(t *testing.T) {
 					Data: &models.LoginPassword{Login: "admin", SecretTOTP: "MZXW6YTBOI======"},
 				},
 			},
-			contains: []string{"[ID: secretID] Аккаунт: Name (URL) | 2FA:"},
+			contains: []string{" Аккаунт: Name (URL) | OTP:"},
 		},
 		{
 			name:  "отображение списка TypeText",

@@ -32,6 +32,10 @@ var (
 	ErrUserAlreadyExists = errors.New("логин занят")
 	// ErrUserNotFound определяет ошибку, когда пользователь не найден.
 	ErrUserNotFound = errors.New("пользователь не найден")
+	// ErrClientUnauthorized определяет ошибку, когда cервер вернул код 401
+	ErrClientUnauthorized = errors.New("клиент не авторизован")
+	// ErrClientUnauthorized определяет ошибку, когда токен отсутствует
+	ErrNoToken = errors.New("токен отсутствует")
 )
 
 // User содержит данные о пользователе.

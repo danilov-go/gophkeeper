@@ -56,7 +56,6 @@ func (c *ConfigServer) Get() error {
 	v.SetDefault("protocol", "https")
 	v.SetDefault("path_tls_cert", "certs/server.crt")
 	v.SetDefault("path_tls_key", "certs/server.key")
-	v.SetDefault("token", "jwt_secret_token")
 	v.SetEnvPrefix("server")
 	v.AutomaticEnv()
 	if err := v.BindPFlag("address", pflag.CommandLine.Lookup("address")); err != nil {

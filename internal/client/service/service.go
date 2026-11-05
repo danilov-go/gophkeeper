@@ -58,6 +58,9 @@ type ClientService struct {
 	strategy Strategy
 	key      *memguard.LockedBuffer
 	syncCh   chan<- struct{}
+	offline  bool
+	login    string
+	authHash *memguard.LockedBuffer
 }
 
 // NewClientService создает экземпляр ClientService.
