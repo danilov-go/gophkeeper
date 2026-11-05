@@ -111,7 +111,7 @@ func newOptions(sType models.SecretType) []FormOption {
 			{Label: "URL", Data: "http://yandex.ru", Limit: 40},
 			{Label: "Логин / Email", Data: "Введите логин ...", Limit: 40},
 			{Label: "Пароль", Data: "Введите пароль ...", Limit: 40, Hide: true},
-			{Label: "TOTP", Data: "Введите TOTP ...", Limit: 40, Hide: true},
+			{Label: "OTP", Data: "Введите OTP ...", Limit: 40, Hide: true},
 		}
 	case models.TypeText:
 		return []FormOption{

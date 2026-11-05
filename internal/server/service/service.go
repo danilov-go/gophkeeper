@@ -1,4 +1,4 @@
-// Package service содержит бизнес-логику сервера
+// Package service содержит бизнес-логику сервера.
 package service
 
 import (

@@ -70,7 +70,7 @@ func (h *Handler) PullHandler() LoginHandlerFunc {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        device-id  header    string             true  "Уникальный идентификатор устройства клиента"
+// @Param        device-id  header    string             true  "Идентификатор устройства"
 // @Param        body       body      models.Changelogs  true  "Журнал изменений секретов"
 // @Success      200        "Изменения успешно применены"
 // @Failure      400        {string}  string                 "Невалидный JSON или отсутствует заголовок device-id"

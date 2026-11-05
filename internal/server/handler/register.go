@@ -40,7 +40,7 @@ func decode[T any](w http.ResponseWriter, r *http.Request) (T, error) {
 // @Success      200   "Успешная регистрация, токен возвращается в заголовке Authorization"
 // @Failure      400   {string}  string "Неверные входные данные или пустой логин/пароль"
 // @Failure      409   {string}  string "Логин уже занят другим пользователем"
-// @Failure      500   {string}  string "Внутренняя ошибка сервера при обработке регистрации"
+// @Failure      500   {string}  string "Внутренняя ошибка сервера"
 // @Router       /user/register [post]
 func (h *Handler) RegisterUser() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

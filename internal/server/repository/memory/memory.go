@@ -1,3 +1,4 @@
+// Package memory реализует хранилище данных в оперативной памяти.
 package memory
 
 import (

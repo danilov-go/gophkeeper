@@ -1,4 +1,4 @@
-// Package handler реализует HTTP-интерфейс приложения.
+// Package handler реализует сетевой-интерфейс приложения.
 package handler
 
 import (

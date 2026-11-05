@@ -189,7 +189,7 @@ func (m ListModel) View() string {
 			}
 			switch v := secret.Meta.(type) {
 			case *models.MetaCard:
-				s.WriteString(fmt.Sprintf("%s [ID: %s] Карта: %s [%s]\n", cursor, secret.ID, v.Name, v.BankName))
+				s.WriteString(fmt.Sprintf("%s Карта: %s [%s]\n", cursor, v.Name, v.BankName))
 			case *models.MetaLoginPassword:
 				otpCode := "Not configured"
 				if lp, ok := secret.Data.(*models.LoginPassword); ok && lp.SecretTOTP != "" {
@@ -199,18 +199,18 @@ func (m ListModel) View() string {
 						otpCode = "Invalid Secret"
 					}
 				}
-				s.WriteString(fmt.Sprintf("%s [ID: %s] Аккаунт: %s (%s) | 2FA: %s, Время действия TOTP: %d\n", cursor, secret.ID, v.Name, v.URL, otpCode, m.tikerOTP))
+				s.WriteString(fmt.Sprintf("%s Аккаунт: %s (%s) | OTP: %s, Время действия OTP: %d\n", cursor, v.Name, v.URL, otpCode, m.tikerOTP))
 			case *models.MetaText:
 				runes := []rune(v.Name)
 				preview := string(runes)
 				if len(runes) > 30 {
 					preview = string(runes[:27]) + "..."
 				}
-				s.WriteString(fmt.Sprintf("%s [ID: %s] Заметка: %s\n", cursor, secret.ID, preview))
+				s.WriteString(fmt.Sprintf("%s Заметка: %s\n", cursor, preview))
 			case *models.MetaBinary:
-				s.WriteString(fmt.Sprintf("%s [ID: %s] Файл: %s (%s) | %d байт\n", cursor, secret.ID, v.Name, v.Type, v.Size))
+				s.WriteString(fmt.Sprintf("%s Файл: %s (%s) | %d байт\n", cursor, v.Name, v.Type, v.Size))
 			default:
-				s.WriteString(fmt.Sprintf("%s [ID: %s] Данные неизвестного типа\n", cursor, secret.ID))
+				s.WriteString(fmt.Sprintf("%s Данные неизвестного типа\n", cursor))
 			}
 		}
 	}

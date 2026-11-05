@@ -187,7 +187,7 @@ func TestGRPCHandler_Push(t *testing.T) {
 	}
 }
 
-func TestAuthInterceptor(t *testing.T) {
+func TestGRPCHandler_AuthInterceptor(t *testing.T) {
 	unaryHandler := func(ctx context.Context, req any) (any, error) {
 		if _, ok := req.(*proto.SaltRequest); ok {
 			return "success", nil
