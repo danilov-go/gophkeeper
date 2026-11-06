@@ -39,7 +39,9 @@ func NewGRPCSender(serverAddr string, l log, deviceID string, cert []byte) (*GRP
 		return nil, fmt.Errorf("ошибка парсинга сертификата")
 	}
 	creds := credentials.NewClientTLSFromCert(certPool, "")
-	conn, err := grpc.NewClient(serverAddr, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(serverAddr,
+		grpc.WithTransportCredentials(creds),
+		grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: 5 * time.Second}))
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +105,7 @@ func (s *GRPCSender) Sync(ctx context.Context, versions map[string]models.Versio
 	token := s.token
 	s.mu.RUnlock()
 	if token == "" {
-		return nil, errors.New("клиент не авторизован")
+		return nil, models.ErrNoToken
 	}
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
 	version := make(map[string]*proto.VersionTime)

@@ -146,13 +146,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, authFormCmd
 	case menuState:
 		if keyMsg, ok := msg.(tea.KeyMsg); ok {
-			if keyMsg.String() == "q" {
+			if keyMsg.String() == "q" || keyMsg.String() == "й" {
 				m.service.Logout()
 				m.state = authState
 				m.authMenu = NewAuthMenuModel(m.bulder)
 				return m, m.authMenu.Init()
 			}
-			if keyMsg.String() == "c" {
+			if keyMsg.String() == "c" || keyMsg.String() == "с" {
 				m.state = conflictState
 				m.conflict = NewConflictModel(m.service)
 				return m, m.conflict.Init()
@@ -174,7 +174,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case listState:
 		if keyMsg, ok := msg.(tea.KeyMsg); ok {
 			switch keyMsg.String() {
-			case "n":
+			case "n", "т":
 				m.form = NewFormModel(m.service, m.list.sType)
 				m.state = formState
 				return m, m.form.Init()

@@ -153,7 +153,7 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+r":
+		case "ctrl+r", "ctrl+к":
 			for i, opt := range m.option {
 				if opt.Hide {
 					if m.inputs[i].EchoMode == textinput.EchoPassword {

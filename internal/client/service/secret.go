@@ -75,7 +75,6 @@ func (s *ClientService) Delete(ctx context.Context, id string) error {
 		s.trigger()
 	}
 	return err
-
 }
 
 // GetAll возвращает список расшифрованных данных переданного типа.

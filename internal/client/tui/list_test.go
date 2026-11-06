@@ -83,8 +83,11 @@ func TestListModel_Update(t *testing.T) {
 			name:       "нажатие d",
 			sType:      models.TypeText,
 			initCursor: 0,
-			secrets:    secrets,
-			msg:        tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")},
+			secrets: []models.Secret{
+				{ID: secretID1, Type: models.TypeText},
+				{ID: secretID2, Type: models.TypeText},
+			},
+			msg: tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")},
 			setupMock: func(s *mocks.SecretService) {
 				s.On("Delete", mock.Anything, secretID1).Return(nil).Once()
 				s.On("GetAll", mock.Anything, models.SecretType("text")).Return([]models.Secret{}, nil).Maybe()
@@ -94,7 +97,7 @@ func TestListModel_Update(t *testing.T) {
 			wantInitCmd: true,
 		},
 		{
-			name:       "Ошибка метода Delete записывается в поле err модели",
+			name:       "ошибка метода Delete записывается в поле err модели",
 			sType:      models.TypeText,
 			initCursor: 0,
 			secrets:    secrets,
@@ -106,7 +109,7 @@ func TestListModel_Update(t *testing.T) {
 			expErr: errTest,
 		},
 		{
-			name:       "Получение нового слайса секретов обновляет данные модели",
+			name:       "получение нового слайса секретов обновляет данные модели",
 			sType:      models.TypeText,
 			initCursor: 0,
 			msg:        secrets,
@@ -120,6 +123,10 @@ func TestListModel_Update(t *testing.T) {
 				tt.setupMock(service)
 			}
 			m := NewListModel(service, tt.sType)
+			if tt.secrets != nil {
+				m.secrets = make([]models.Secret, len(tt.secrets))
+				copy(m.secrets, tt.secrets)
+			}
 			m.secrets = tt.secrets
 			m.cursor = tt.initCursor
 			msg := tt.msg

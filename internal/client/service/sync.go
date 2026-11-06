@@ -89,8 +89,7 @@ func (s *ClientService) syncError(ctx context.Context, syncErr error, localVersi
 		s.mu.Lock()
 		s.offline = true
 		s.mu.Unlock()
-		s.sender.Logout()
-		return nil, nil
+		return nil, authErr
 	}
 	s.mu.Lock()
 	s.offline = false
