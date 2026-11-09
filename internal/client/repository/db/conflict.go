@@ -30,7 +30,7 @@ func (s *storageDB) GetConflicts(ctx context.Context) ([]models.CipherData, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var conflicts []models.CipherData
 	for rows.Next() {
 		var cd models.CipherData

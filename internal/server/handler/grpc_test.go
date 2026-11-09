@@ -108,7 +108,7 @@ func TestGRPCHandler_Pull(t *testing.T) {
 	req := &proto.PullRequest{Versions: map[string]*proto.VersionTime{
 		secretID: {Version: 1, UpdatedAt: time.Now().UnixNano()},
 	}}
-	ctxUser := context.WithValue(context.Background(), "userID", userID)
+	ctxUser := context.WithValue(context.Background(), models.UserID, userID)
 	tests := []struct {
 		name      string
 		ctx       context.Context
@@ -153,7 +153,7 @@ func TestGRPCHandler_Pull(t *testing.T) {
 }
 
 func TestGRPCHandler_Push(t *testing.T) {
-	ctxUser := context.WithValue(context.Background(), "userID", userID)
+	ctxUser := context.WithValue(context.Background(), models.UserID, userID)
 	req := &proto.PushRequest{
 		DeviceId: deviceID,
 		Changelogs: []*proto.Changelog{
@@ -192,7 +192,7 @@ func TestGRPCHandler_AuthInterceptor(t *testing.T) {
 		if _, ok := req.(*proto.SaltRequest); ok {
 			return "success", nil
 		}
-		if id, ok := ctx.Value("userID").(int); ok && id == userID {
+		if id, ok := ctx.Value(models.UserID).(int); ok && id == userID {
 			return "success", nil
 		}
 		return nil, status.Error(codes.Unauthenticated, "bad context id")
@@ -296,7 +296,7 @@ func TestGRPCHandler_Stream(t *testing.T) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	require.NoError(t, err)
-	t.Cleanup(func() { conn.Close() })
+	t.Cleanup(func() { _ = conn.Close() })
 	client := proto.NewSyncServiceClient(conn)
 	mdCtx := metadata.NewOutgoingContext(context.Background(), metadata.MD{
 		"authorization": []string{token},

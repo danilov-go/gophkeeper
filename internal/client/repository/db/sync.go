@@ -18,7 +18,7 @@ func (s *storageDB) GetVersion(ctx context.Context) (map[string]models.VersionTi
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	versions := make(map[string]models.VersionTime)
 	for rows.Next() {
 		var id string
@@ -42,7 +42,7 @@ func (s *storageDB) GetChangelog() ([]models.Changelog, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var changelog []models.Changelog
 	for rows.Next() {
 		var log models.Changelog
@@ -76,7 +76,7 @@ func (s *storageDB) SyncUpdate(ctx context.Context, cipherData []models.CipherDa
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	for _, cipher := range cipherData {
 		deletedInt := 0
 		if cipher.Deleted {

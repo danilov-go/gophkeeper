@@ -58,7 +58,9 @@ func (h *Handler) PullHandler() LoginHandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write(res)
+		if _, err = w.Write(res); err != nil {
+			h.logger.Errorw("ошибка записи", "error", err)
+		}
 	}
 }
 

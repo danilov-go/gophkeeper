@@ -156,7 +156,7 @@ func (s *GRPCHandler) Stream(req *proto.StreamRequest, stream proto.SyncService_
 }
 
 func (s *GRPCHandler) getUser(ctx context.Context) (int, error) {
-	if id, ok := ctx.Value("userID").(int); ok {
+	if id, ok := ctx.Value(models.UserID).(int); ok {
 		return id, nil
 	}
 	return 0, status.Error(codes.Unauthenticated, "пользователь не авторизован")
@@ -200,7 +200,7 @@ func AuthInterceptor(service ServerService) grpc.UnaryServerInterceptor {
 		if err != nil {
 			return nil, status.Error(codes.Unauthenticated, "невалидный или просроченный токен")
 		}
-		rcCtx := context.WithValue(ctx, "userID", authUser.ID)
+		rcCtx := context.WithValue(ctx, models.UserID, authUser.ID)
 		return handler(rcCtx, req)
 	}
 }

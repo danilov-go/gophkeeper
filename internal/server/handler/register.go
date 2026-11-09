@@ -21,7 +21,7 @@ type LoginPassword struct {
 func decode[T any](w http.ResponseWriter, r *http.Request) (T, error) {
 	var body T
 	r.Body = http.MaxBytesReader(w, r.Body, 64*1024*1024)
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return body, err
@@ -120,7 +120,6 @@ func (h *Handler) LoginUser() http.HandlerFunc {
 			h.logger.Errorw("ошибка сериализации ответа с солью", "error", err)
 			return
 		}
-
 	})
 }
 

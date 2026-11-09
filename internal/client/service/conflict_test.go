@@ -16,8 +16,10 @@ const (
 	secretID = "secretID"
 )
 
-var testKey = []byte("12345678912345678912345678912345")
-var errTest = errors.New("test error")
+var (
+	testKey = []byte("12345678912345678912345678912345")
+	errTest = errors.New("test error")
+)
 
 func TestClientService_GetConflicts(t *testing.T) {
 	memguard.Purge()

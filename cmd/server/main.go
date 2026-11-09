@@ -18,7 +18,6 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/server/sync"
 	"github.com/danilov-go/gophkeeper/internal/server/transport"
 	"github.com/danilov-go/gophkeeper/internal/strategy"
-	"github.com/go-chi/chi"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -84,24 +83,18 @@ func main() {
 		})
 	} else {
 		h := handler.NewHandlers(logger.Log.Sugar(), srv)
-		r := chi.NewRouter()
-		r.Get("/swagger/*", httpSwagger.WrapHandler)
-		r.Get("/api-docs", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /swagger/*", httpSwagger.WrapHandler)
+		mux.HandleFunc("GET /api-docs", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/swagger/index.html", http.StatusMovedPermanently)
-		}))
-		r.Route("/user", func(r chi.Router) {
-			r.Post("/register", h.RegisterUser())
-			r.Post("/login", h.LoginUser())
-			r.Get("/salt", h.GetSalt())
 		})
-		r.Route("/api", func(r chi.Router) {
-			r.Get("/event", h.AuthMiddleware(h.StreamHandler()))
-			r.With(handler.GzipMiddleware).Group(func(r chi.Router) {
-				r.Post("/pull", h.AuthMiddleware(h.PullHandler()))
-				r.Post("/push", h.AuthMiddleware(h.PushHandler()))
-			})
-		})
-		serv := transport.New(cfg.Net.String(), logger.Log.Sugar(), r, ctx, cfg.PathTLSCert, cfg.PathTLSKey)
+		mux.Handle("POST /user/register", h.RegisterUser())
+		mux.Handle("POST /user/login", h.LoginUser())
+		mux.Handle("GET /user/salt", h.GetSalt())
+		mux.Handle("GET /api/event", h.AuthMiddleware(h.StreamHandler()))
+		mux.Handle("POST /api/pull", handler.GzipMiddleware(h.AuthMiddleware(h.PullHandler())))
+		mux.Handle("POST /api/push", handler.GzipMiddleware(h.AuthMiddleware(h.PushHandler())))
+		serv := transport.New(cfg.Net.String(), logger.Log.Sugar(), mux, ctx, cfg.PathTLSCert, cfg.PathTLSKey)
 		g.Go(func() error {
 			logger.Log.Sugar().Info("Сервер запущен по протоколу HTTPS на ", cfg.Net.String())
 			return serv.Run()

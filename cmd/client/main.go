@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"os"
 	"os/signal"
 	"syscall"
 
@@ -41,12 +39,17 @@ func main() {
 	if err := cfg.Validate(); err != nil {
 		logger.Log.Sugar().Fatal(err)
 	}
-	db, err := db.InitDB(cfg.PathDB)
+	storage, err := db.InitDB(cfg.PathDB)
 	if err != nil {
 		logger.Log.Sugar().Fatal("ошибка инициализации базы данных", "error", err)
 	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer stop()
+	deviceID, err := storage.GetDeviceID(ctx)
+	if deviceID == "" || err != nil {
+		logger.Log.Sugar().Fatal("ошибка получения ID устройства", "error", err)
+	}
 	var send service.Sender
-	deviceID := fmt.Sprintf("%d", os.Getpid())
 	if cfg.Protocol == "grpc" {
 		var err error
 		send, err = sender.NewGRPCSender(cfg.Net.String(), logger.Log.Sugar(), deviceID, Cert)
@@ -58,10 +61,8 @@ func main() {
 	}
 	syncChan := make(chan struct{}, 1)
 	conflict := strategy.NewClientStrategy()
-	srvc := service.NewClientService(db, send, conflict, syncChan)
+	srvc := service.NewClientService(storage, send, conflict, syncChan)
 	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), cfg.SendInterval, cfg.Cooldown, syncChan)
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	defer stop()
 	go syncWorker.Run(ctx)
 	go func() {
 		send.ServerEvent(ctx, func() {

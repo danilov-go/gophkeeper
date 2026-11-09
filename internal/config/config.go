@@ -52,7 +52,7 @@ func (n *NetAddress) UnmarshalJSON(data []byte) error {
 
 // PrintBuild выводит в консоль информацию о текущей сборке приложения.
 func PrintBuild(w io.Writer, version, date, commit string) {
-	fmt.Fprintf(w, "Build version: %s\n", version)
-	fmt.Fprintf(w, "Build date: %s\n", date)
-	fmt.Fprintf(w, "Build commit: %s\n", commit)
+	_, _ = fmt.Fprintf(w, "Build version: %s\n", version)
+	_, _ = fmt.Fprintf(w, "Build date: %s\n", date)
+	_, _ = fmt.Fprintf(w, "Build commit: %s\n", commit)
 }

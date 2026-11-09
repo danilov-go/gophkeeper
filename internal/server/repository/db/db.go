@@ -12,6 +12,8 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -79,7 +81,7 @@ func (s *storageDB) GetSecrets(ctx context.Context, userID int, v models.SecretV
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var cipherData []models.CipherData
 	for rows.Next() {
 		var id string
@@ -148,7 +150,11 @@ func (s *storageDB) SaveUser(ctx context.Context, login, hash, salt string) (int
 	var userID int
 	err := s.db.QueryRowContext(ctx, query, login, hash, salt).Scan(&userID)
 	if err != nil {
-		return 0, models.ErrUserAlreadyExists
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			return 0, models.ErrUserAlreadyExists
+		}
+		return 0, err
 	}
 	return userID, nil
 }

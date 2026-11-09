@@ -3,6 +3,7 @@ package worker
 
 import (
 	"context"
+	"iter"
 	"time"
 )
 
@@ -69,6 +70,12 @@ func (w *SyncWorker) runSync(ctx context.Context) {
 }
 
 // Occurrence возвращает канал для отслеживания фактов успешной синхронизации данных.
-func (w *SyncWorker) Occurrence() <-chan struct{} {
-	return w.occurrence
+func (w *SyncWorker) Occurrence() iter.Seq[struct{}] {
+	return func(yield func(struct{}) bool) {
+		for range w.occurrence {
+			if !yield(struct{}{}) {
+				return
+			}
+		}
+	}
 }

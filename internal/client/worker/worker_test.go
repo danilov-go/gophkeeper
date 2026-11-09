@@ -3,8 +3,10 @@ package worker
 import (
 	"context"
 	"errors"
+	"iter"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -67,26 +69,30 @@ func TestSyncWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			syncer := &mockSyncer{err: tt.expErr}
-			syncCh := make(chan struct{}, 1)
-			worker := NewSyncWorker(syncer, zap.NewNop().Sugar(), tt.interval, tt.cooldown, syncCh)
-			go worker.Run(ctx)
-			if tt.trigger {
-				syncCh <- struct{}{}
-				if tt.expErr == nil {
-					select {
-					case <-worker.Occurrence():
-					case <-time.After(15 * time.Millisecond):
-						assert.Fail(t, "канал Occurrence пуст")
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				syncer := &mockSyncer{err: tt.expErr}
+				syncCh := make(chan struct{}, 1)
+				worker := NewSyncWorker(syncer, zap.NewNop().Sugar(), tt.interval, tt.cooldown, syncCh)
+				go worker.Run(ctx)
+				synctest.Wait()
+				if tt.trigger {
+					syncCh <- struct{}{}
+					synctest.Wait()
+					if tt.expErr == nil {
+						next, stop := iter.Pull(worker.Occurrence())
+						defer stop()
+						_, ok := next()
+						assert.True(t, ok)
 					}
 				}
-			}
-			time.Sleep(tt.sleep)
-			assert.GreaterOrEqual(t, syncer.GetCount(), tt.count)
-			cancel()
-			time.Sleep(5 * time.Millisecond)
+				time.Sleep(tt.sleep)
+				synctest.Wait()
+				assert.GreaterOrEqual(t, syncer.GetCount(), tt.count)
+				cancel()
+				time.Sleep(5 * time.Millisecond)
+			})
 		})
 	}
 }

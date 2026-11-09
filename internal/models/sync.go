@@ -2,6 +2,10 @@ package models
 
 import "time"
 
+type ctxKey string
+
+const UserID ctxKey = "userID"
+
 // SyncAction содержит тип действия при синхронизации данных.
 type SyncAction int
 

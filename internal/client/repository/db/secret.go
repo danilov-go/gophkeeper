@@ -20,7 +20,7 @@ func (s *storageDB) SaveSecret(ctx context.Context, secret models.CipherData) (s
 	if err != nil {
 		return "", err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if secret.ID == "" {
 		secret.ID = uuid.New().String()
 	}
@@ -74,7 +74,7 @@ func (s *storageDB) GetAllSecret(ctx context.Context, sType models.SecretType) (
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var secrets []models.CipherData
 	for rows.Next() {
 		var secret models.CipherData
@@ -103,7 +103,7 @@ func (s *storageDB) UpdateSecret(ctx context.Context, secret models.CipherData) 
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var version int
 	query := `SELECT version FROM secrets WHERE id = ?`
 	err = tx.QueryRowContext(ctx, query, secret.ID).Scan(&version)
@@ -141,7 +141,7 @@ func (s *storageDB) DeleteSecret(ctx context.Context, id string, sync bool) erro
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if sync {
 		query := `DELETE FROM secrets WHERE id = ?`
 		_, err = tx.ExecContext(ctx, query, id)

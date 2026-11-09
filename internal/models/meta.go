@@ -8,6 +8,7 @@ import (
 // MetaData возвращает тип метаданных секрета.
 type MetaData interface {
 	SecretType() SecretType
+	GetName() string
 }
 
 // MetaCard определяет метаданные для типа Card.
@@ -36,16 +37,20 @@ type MetaText struct {
 type MetaBinary struct {
 	// Name содержит название файла с расширением.
 	Name string `json:"name"`
-	//Size содержит размер файла.
+	// Size содержит размер файла.
 	Size int64 `json:"size"`
-	//Type содержит расширение файла.
+	// Type содержит расширение файла.
 	Type string `json:"type"`
 }
 
 func (*MetaCard) SecretType() SecretType          { return TypeCard }
+func (m *MetaCard) GetName() string               { return m.Name }
 func (*MetaLoginPassword) SecretType() SecretType { return TypeLoginPassword }
+func (m *MetaLoginPassword) GetName() string      { return m.Name }
 func (*MetaText) SecretType() SecretType          { return TypeText }
+func (m *MetaText) GetName() string               { return m.Name }
 func (*MetaBinary) SecretType() SecretType        { return TypeBinary }
+func (m *MetaBinary) GetName() string             { return m.Name }
 
 // NewMetaData создает метаданные секрета из JSON на основе их типа.
 func NewMetaData(secretType SecretType, body []byte) (MetaData, error) {

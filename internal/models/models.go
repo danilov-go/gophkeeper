@@ -35,7 +35,7 @@ type LoginPassword struct {
 
 // TextData определяет произвольный текст.
 type TextData struct {
-	//Text содержит текст заметки.
+	// Text содержит текст заметки.
 	Text string `json:"text"`
 }
 
@@ -47,12 +47,12 @@ type BinaryData struct {
 
 // Card определяет данные банковских карт.
 type Card struct {
-	//Number содержит номер карты.
+	// Number содержит номер карты.
 	Number string `json:"number"`
-	//Date содержит срок действия карты.
+	// Date содержит срок действия карты.
 	Date string `json:"date"`
-	//UserName содержит имя и фамилию владельца карты.
+	// UserName содержит имя и фамилию владельца карты.
 	UserName string `json:"user_name"`
-	//Key содержит CVC код.
+	// Key содержит CVC код.
 	Key string `json:"key"`
 }

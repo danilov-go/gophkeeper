@@ -85,7 +85,7 @@ func (m AuthFormModel) View() string {
 		s.WriteString("Авторизация\n\n")
 	}
 	if m.err != nil {
-		s.WriteString(fmt.Sprintf("Ошибка: %v\n\n", m.err))
+		_, _ = fmt.Fprintf(&s, "Ошибка: %v\n\n", m.err)
 	}
 	if m.success {
 		s.WriteString("Успешно!\n\n")
@@ -93,7 +93,7 @@ func (m AuthFormModel) View() string {
 	}
 	labels := []string{"Логин ", "Пароль"}
 	for i := range m.inputs {
-		s.WriteString(fmt.Sprintf(" %s: %s\n", labels[i], m.inputs[i].View()))
+		_, _ = fmt.Fprintf(&s, " %s: %s\n", labels[i], m.inputs[i].View())
 	}
 	return s.String()
 }

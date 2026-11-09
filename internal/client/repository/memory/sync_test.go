@@ -96,7 +96,6 @@ func TestMemStorage_Changelog(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, remainingLogs, 1)
 	assert.Equal(t, id2, remainingLogs[0].SecretID)
-
 }
 
 func TestMemStorage_SyncUpdate(t *testing.T) {

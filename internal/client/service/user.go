@@ -79,6 +79,7 @@ func (s *ClientService) Login(ctx context.Context, login, password string) error
 			return err
 		}
 		if err = s.storage.SaveUser(ctx, login, hash, salt); err != nil {
+			return err
 		}
 	} else {
 		if localUser.Hash != hash {

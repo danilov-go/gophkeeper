@@ -110,7 +110,6 @@ func TestFormModel_Update(t *testing.T) {
 		wantSaveCmd bool
 	}{
 		{
-
 			name:      "нажатие down",
 			initFocus: 0,
 			msg:       tea.KeyMsg{Type: tea.KeyDown},

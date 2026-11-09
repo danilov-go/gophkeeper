@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -58,7 +57,7 @@ func (m AuthMenuModel) View() string {
 		if m.cursor == i {
 			cursor = ">"
 		}
-		s.WriteString(fmt.Sprintf("%s %s\n", cursor, option))
+		s.WriteString(cursor + " " + option + "\n")
 	}
 	s.WriteString("\n" + "Версия: " + m.bulder.Version + " " + "Дата: " + m.bulder.Date)
 	return s.String()

@@ -3,6 +3,7 @@ package tui
 
 import (
 	"context"
+	"iter"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danilov-go/gophkeeper/internal/models"
@@ -48,40 +49,42 @@ type Bulder struct {
 
 // AppModel определяет корневую модель Bubble Tea приложения.
 type AppModel struct {
-	state          sessionState
-	service        SecretService
-	syncChan       chan<- struct{}
-	occurrenceChan <-chan struct{}
-	authMenu       AuthMenuModel
-	authForm       AuthFormModel
-	menu           MenuModel
-	list           ListModel
-	form           FormModel
-	conflict       ConflictModel
-	bulder         Bulder
+	state      sessionState
+	service    SecretService
+	syncChan   chan<- struct{}
+	occurrence iter.Seq[struct{}]
+	authMenu   AuthMenuModel
+	authForm   AuthFormModel
+	menu       MenuModel
+	list       ListModel
+	form       FormModel
+	conflict   ConflictModel
+	bulder     Bulder
 }
 
 // NewAppModel создает новый экземпляр AppModel.
-func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrenceChan <-chan struct{}, bulder Bulder) AppModel {
+func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrence iter.Seq[struct{}], bulder Bulder) AppModel {
 	return AppModel{
-		state:          authState,
-		service:        storage,
-		syncChan:       syncChan,
-		occurrenceChan: occurrenceChan,
-		authMenu:       NewAuthMenuModel(bulder),
-		list:           NewListModel(storage, models.SecretType("")),
-		conflict:       NewConflictModel(storage),
-		bulder:         bulder,
+		state:      authState,
+		service:    storage,
+		syncChan:   syncChan,
+		occurrence: occurrence,
+		authMenu:   NewAuthMenuModel(bulder),
+		list:       NewListModel(storage, models.SecretType("")),
+		conflict:   NewConflictModel(storage),
+		bulder:     bulder,
 	}
 }
 
 // Sync ждет сигнал об успешной синхронизации и передает его в интерфейс.
-func Sync(ch <-chan struct{}) tea.Cmd {
+func Sync(seq iter.Seq[struct{}]) tea.Cmd {
 	return func() tea.Msg {
-		if ch == nil {
+		if seq == nil {
 			return nil
 		}
-		_, ok := <-ch
+		next, stop := iter.Pull(seq)
+		defer stop()
+		_, ok := next()
 		if !ok {
 			return nil
 		}
@@ -93,7 +96,7 @@ func Sync(ch <-chan struct{}) tea.Cmd {
 func (m AppModel) Init() tea.Cmd {
 	return tea.Batch(
 		m.authMenu.Init(),
-		Sync(m.occurrenceChan),
+		Sync(m.occurrence),
 	)
 }
 
@@ -109,9 +112,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state == listState && m.list.sType != "" {
 			updatedList, listCmd := m.list.Update(SyncOccurrenceMsg{})
 			m.list = updatedList.(ListModel)
-			return m, tea.Batch(listCmd, Sync(m.occurrenceChan))
+			return m, tea.Batch(listCmd, Sync(m.occurrence))
 		}
-		return m, Sync(m.occurrenceChan)
+		return m, Sync(m.occurrence)
 	}
 	switch m.state {
 	case authState:

@@ -12,6 +12,8 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 	"github.com/danilov-go/gophkeeper/internal/server/repository/db"
 	"github.com/danilov-go/gophkeeper/internal/strategy"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,13 +57,13 @@ func TestStorageDB_SaveUser(t *testing.T) {
 			hash:  expHash,
 			salt:  expSalt,
 			setupMock: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(query).WithArgs(expLogin, expHash, expSalt).WillReturnError(errTest)
+				err := &pgconn.PgError{Code: pgerrcode.UniqueViolation}
+				mock.ExpectQuery(query).WithArgs(expLogin, expHash, expSalt).WillReturnError(err)
 			},
 			wantID:  0,
 			wantErr: models.ErrUserAlreadyExists,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sql, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))

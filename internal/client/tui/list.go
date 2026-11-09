@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"slices"
 	"strings"
 	"time"
@@ -83,9 +84,10 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.searching {
 		if keyMsg, ok := msg.(tea.KeyMsg); ok {
 			switch keyMsg.String() {
-			case "enter", "esc":
+			case "enter", "esc", "/", ".":
 				m.searching = false
 				m.search.Blur()
+				m.search.SetValue("")
 				return m, nil
 			}
 		}
@@ -104,9 +106,16 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusMsg = "Данные обновлены"
 		return m, m.Init()
 	case tea.KeyMsg:
-		secrets := m.filtered()
+		count := 0
+		var secret models.Secret
+		for s := range m.filtered() {
+			if count == m.cursor {
+				secret = s
+			}
+			count++
+		}
 		switch msg.String() {
-		case "/":
+		case "/", ".":
 			m.searching = true
 			m.statusMsg = ""
 			return m, m.search.Focus()
@@ -117,36 +126,37 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "down":
 			m.statusMsg = ""
-			if m.cursor < len(secrets)-1 {
+			if m.cursor < count-1 {
 				m.cursor++
 			}
 		case "d", "в":
 			m.statusMsg = ""
-			if len(secrets) == 0 {
+			if count == 0 {
 				return m, nil
 			}
-			secret := secrets[m.cursor]
 			m.delete = true
 			m.secrets = slices.DeleteFunc(m.secrets, func(s models.Secret) bool {
 				return s.ID == secret.ID
 			})
-			if m.cursor > 0 && m.cursor == len(secrets)-1 {
+			if m.cursor > 0 && m.cursor == count-1 {
 				m.cursor--
 			}
 			return m, m.deleteSecret(secret.ID)
 		case "s", "ы":
-			if len(secrets) == 0 || m.sType != models.TypeBinary {
+			if count == 0 || m.sType != models.TypeBinary {
 				return m, nil
 			}
-			secret := secrets[m.cursor]
 			return m, m.exportCmd(secret)
 		}
 	case []models.Secret:
 		m.secrets = msg
 		m.err = nil
-		secrets := m.filtered()
-		if m.cursor >= len(secrets) && len(secrets) > 0 {
-			m.cursor = len(secrets) - 1
+		count := 0
+		for range m.filtered() {
+			count++
+		}
+		if m.cursor >= count && count > 0 {
+			m.cursor = count - 1
 		}
 	case error:
 		m.delete = false
@@ -176,32 +186,30 @@ func (m ListModel) deleteSecret(id string) tea.Cmd {
 // View отрисовывает список секретов, форматируя строки под каждый тип данных.
 func (m ListModel) View() string {
 	var s strings.Builder
-	s.WriteString(fmt.Sprintf("Категория: %s \n\n", m.sType))
+	_, _ = fmt.Fprintf(&s, "Категория: %s \n\n", m.sType)
 	if m.searching || m.search.Value() != "" {
 		s.WriteString("Поиск: " + m.search.View() + "\n\n")
 	}
 	if m.statusMsg != "" {
-		s.WriteString(fmt.Sprintf("%s\n\n", m.statusMsg))
+		_, _ = fmt.Fprintf(&s, "%s\n\n", m.statusMsg)
 	}
-	secrets := m.filtered()
 	if m.err != nil {
 		errStr := m.err.Error()
 		if strings.Contains(errStr, "пустое") || strings.Contains(errStr, "отсутствуют") {
 			s.WriteString("Список пуст.\n\n")
 		} else {
-			s.WriteString(fmt.Sprintf("Ошибка: %v\n\n", m.err))
+			_, _ = fmt.Fprintf(&s, "Ошибка: %v\n\n", m.err)
 		}
-	} else if len(secrets) == 0 {
-		s.WriteString("Список пуст.\n\n")
 	} else {
-		for i, secret := range secrets {
+		count := 0
+		for secret := range m.filtered() {
 			cursor := " "
-			if m.cursor == i {
+			if m.cursor == count {
 				cursor = ">"
 			}
 			switch v := secret.Meta.(type) {
 			case *models.MetaCard:
-				s.WriteString(fmt.Sprintf("%s Карта: %s [%s]\n", cursor, v.Name, v.BankName))
+				_, _ = fmt.Fprintf(&s, "%s Карта: %s [%s]\n", cursor, v.Name, v.BankName)
 			case *models.MetaLoginPassword:
 				otpCode := "Не настроен"
 				if lp, ok := secret.Data.(*models.LoginPassword); ok && lp.SecretTOTP != "" {
@@ -211,19 +219,23 @@ func (m ListModel) View() string {
 						otpCode = "Невалидный ключ"
 					}
 				}
-				s.WriteString(fmt.Sprintf("%s Аккаунт: %s (%s) | OTP: %s, Время действия OTP: %d\n", cursor, v.Name, v.URL, otpCode, m.tikerOTP))
+				_, _ = fmt.Fprintf(&s, "%s Аккаунт: %s (%s) | OTP: %s, Время действия OTP: %d\n", cursor, v.Name, v.URL, otpCode, m.tikerOTP)
 			case *models.MetaText:
 				runes := []rune(v.Name)
 				preview := string(runes)
 				if len(runes) > 30 {
 					preview = string(runes[:27]) + "..."
 				}
-				s.WriteString(fmt.Sprintf("%s Заметка: %s\n", cursor, preview))
+				_, _ = fmt.Fprintf(&s, "%s Заметка: %s\n", cursor, preview)
 			case *models.MetaBinary:
-				s.WriteString(fmt.Sprintf("%s Файл: %s (%s) | %d байт\n", cursor, v.Name, v.Type, v.Size))
+				_, _ = fmt.Fprintf(&s, "%s Файл: %s (%s) | %d байт\n", cursor, v.Name, v.Type, v.Size)
 			default:
-				s.WriteString(fmt.Sprintf("%s Данные неизвестного типа\n", cursor))
+				_, _ = fmt.Fprintf(&s, "%s Данные неизвестного типа\n", cursor)
 			}
+			count++
+		}
+		if count == 0 {
+			s.WriteString("Список пуст.\n\n")
 		}
 	}
 	listKeys := keys
@@ -236,29 +248,24 @@ func (m ListModel) View() string {
 	return s.String()
 }
 
-func (m ListModel) filtered() []models.Secret {
-	query := strings.ToLower(m.search.Value())
-	if query == "" {
-		return m.secrets
-	}
-	var secrets []models.Secret
-	for _, secret := range m.secrets {
-		name := ""
-		switch v := secret.Meta.(type) {
-		case *models.MetaCard:
-			name = v.Name
-		case *models.MetaLoginPassword:
-			name = v.Name
-		case *models.MetaText:
-			name = v.Name
-		case *models.MetaBinary:
-			name = v.Name
-		}
-		if strings.Contains(strings.ToLower(name), query) {
-			secrets = append(secrets, secret)
+func (m ListModel) filtered() iter.Seq[models.Secret] {
+	return func(yield func(models.Secret) bool) {
+		query := strings.ToLower(m.search.Value())
+		for _, secret := range m.secrets {
+			if query != "" {
+				if secret.Meta == nil {
+					continue
+				}
+				name := secret.Meta.GetName()
+				if !strings.Contains(strings.ToLower(name), query) {
+					continue
+				}
+			}
+			if !yield(secret) {
+				return
+			}
 		}
 	}
-	return secrets
 }
 
 func (m ListModel) exportCmd(secret models.Secret) tea.Cmd {

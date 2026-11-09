@@ -191,12 +191,12 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m FormModel) View() string {
 	var s strings.Builder
 	if m.secretID != "" {
-		s.WriteString(fmt.Sprintf("Редактирование записи [ID: %s]: %s\n\n", m.secretID, m.sType))
+		_, _ = fmt.Fprintf(&s, "Редактирование записи [ID: %s]: %s\n\n", m.secretID, m.sType)
 	} else {
-		s.WriteString(fmt.Sprintf("Добавление записи: %s\n\n", m.sType))
+		_, _ = fmt.Fprintf(&s, "Добавление записи: %s\n\n", m.sType)
 	}
 	if m.err != nil {
-		s.WriteString(fmt.Sprintf("Ошибка: %v\n\n", m.err))
+		_, _ = fmt.Fprintf(&s, "Ошибка: %v\n\n", m.err)
 	}
 	if m.saved {
 		s.WriteString("Запись сохранена!\n\n")
@@ -204,10 +204,10 @@ func (m FormModel) View() string {
 	}
 	for i := range m.inputs {
 		if m.sType == models.TypeBinary && (i == 1 || i == 2) {
-			s.WriteString(fmt.Sprintf(" %s: %s \n", m.option[i].Label, m.inputs[i].Value()))
+			_, _ = fmt.Fprintf(&s, " %s: %s \n", m.option[i].Label, m.inputs[i].Value())
 			continue
 		}
-		s.WriteString(fmt.Sprintf(" %s: %s\n", m.option[i].Label, m.inputs[i].View()))
+		_, _ = fmt.Fprintf(&s, " %s: %s\n", m.option[i].Label, m.inputs[i].View())
 	}
 	formKeys := keys
 	formKeys.mode = modeForm

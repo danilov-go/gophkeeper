@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
 )
 
@@ -28,7 +29,7 @@ func InitDB(path string) (*storageDB, error) {
 	}
 	db.SetMaxOpenConns(1)
 	s := &storageDB{db: db}
-	if err := s.СreateTable(); err != nil {
+	if err := s.CreateTable(); err != nil {
 		if closeErr := db.Close(); closeErr != nil {
 			return nil, errors.Join(err, closeErr)
 		}
@@ -38,8 +39,11 @@ func InitDB(path string) (*storageDB, error) {
 }
 
 // СreateTable создает таблицы пользователей, секретов, журналов и конфликтов.
-func (s *storageDB) СreateTable() error {
+func (s *storageDB) CreateTable() error {
 	queries := []string{
+		`CREATE TABLE IF NOT EXISTS device (
+    		id TEXT PRIMARY KEY
+		);`,
 		`CREATE TABLE IF NOT EXISTS users (
 			login TEXT PRIMARY KEY,
 			hash TEXT NOT NULL,
@@ -58,7 +62,6 @@ func (s *storageDB) СreateTable() error {
 			secret_id TEXT NOT NULL,
 			secret_data TEXT NOT NULL
 		);`,
-
 		`CREATE TABLE IF NOT EXISTS conflicts (
 			id TEXT PRIMARY KEY,
 			type TEXT NOT NULL,
@@ -74,6 +77,40 @@ func (s *storageDB) СreateTable() error {
 		}
 	}
 	return nil
+}
+
+// GetDeviceID возвращает ID устройства.
+func (s *storageDB) GetDeviceID(ctx context.Context) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	var deviceID string
+	query := `SELECT id FROM device LIMIT 1`
+	err := s.db.QueryRowContext(ctx, query).Scan(&deviceID)
+	if err == nil {
+		return deviceID, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return "", err
+	}
+	id := uuid.New().String()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", err
+	}
+	query = `DELETE FROM device`
+	defer func() { _ = tx.Rollback() }()
+	if _, err = tx.ExecContext(ctx, query); err != nil {
+		return "", err
+	}
+	query = `INSERT INTO device (id) VALUES ($1)`
+	if _, err = tx.ExecContext(ctx, query, id); err != nil {
+		return "", err
+	}
+	if err = tx.Commit(); err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 // Ping проверяет доступность хранилища.

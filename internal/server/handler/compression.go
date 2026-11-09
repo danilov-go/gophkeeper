@@ -1,12 +1,11 @@
 package handler
 
 import (
+	"compress/gzip"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
-
-	"compress/gzip"
-	"io"
 )
 
 var poolGzip = sync.Pool{

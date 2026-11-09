@@ -30,13 +30,12 @@ func NewGRPC(address string, l log, s *grpc.Server, pathCert, pathKey string) *G
 
 // Run запускает gRPC-сервер.
 func (serv *GRPCServer) Run() error {
-	listener, err := net.Listen("tcp", serv.Address)
+	cert, err := tls.LoadX509KeyPair(serv.PathTLSCert, serv.PathTLSKey)
 	if err != nil {
 		return err
 	}
-	cert, err := tls.LoadX509KeyPair(serv.PathTLSCert, serv.PathTLSKey)
+	listener, err := net.Listen("tcp", serv.Address)
 	if err != nil {
-		listener.Close()
 		return err
 	}
 	tlsConfig := &tls.Config{
@@ -44,6 +43,7 @@ func (serv *GRPCServer) Run() error {
 		NextProtos:   []string{"h2"},
 	}
 	serv.Listener = tls.NewListener(listener, tlsConfig)
+	defer func() { _ = serv.Listener.Close() }()
 	if err := serv.Server.Serve(serv.Listener); err != nil && err != grpc.ErrServerStopped {
 		return err
 	}

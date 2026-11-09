@@ -30,7 +30,6 @@ type HTTPSender struct {
 	client    *resty.Client
 	sseClient *http.Client
 	logger    log
-	key       []byte
 	token     string
 	deviceID  string
 	mu        sync.RWMutex
@@ -268,7 +267,7 @@ func (s *HTTPSender) ServerEvent(ctx context.Context, runSync func()) {
 			reader := bufio.NewReader(resp.Body)
 			for {
 				if err := ctx.Err(); err != nil {
-					resp.Body.Close()
+					_ = resp.Body.Close()
 					return
 				}
 				s.mu.RLock()
@@ -285,7 +284,7 @@ func (s *HTTPSender) ServerEvent(ctx context.Context, runSync func()) {
 					runSync()
 				}
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			time.Sleep(time.Second * 2)
 		}
 	}()

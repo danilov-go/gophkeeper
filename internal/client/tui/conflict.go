@@ -111,7 +111,7 @@ func (m ConflictModel) View() string {
 		if i == m.cursor {
 			cursorStr = ">"
 		}
-		b.WriteString(fmt.Sprintf("%s Конфликт в секрете ID %s (Тип: %s)\n", cursorStr, c.ID, c.Local.Type))
+		_, _ = fmt.Fprintf(&b, "%s Конфликт в секрете ID %s (Тип: %s)\n", cursorStr, c.ID, c.Local.Type)
 		if i == m.cursor {
 			serverForm := NewEditForm(m.service, c.Server)
 			for idx := range serverForm.inputs {

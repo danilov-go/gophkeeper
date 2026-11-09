@@ -13,10 +13,7 @@ func TestSyncNotifier(t *testing.T) {
 	userID := 15
 	chan1, closeChan1 := notifier.Register(userID, "device1")
 	chan2, closeChan2 := notifier.Register(userID, "device2")
-	defer func() {
-		defer func() { recover() }()
-		closeChan2()
-	}()
+
 	event := models.SyncEvent{
 		UserID:   userID,
 		DeviceID: "device1",
@@ -59,4 +56,10 @@ func TestSyncNotifier(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 	_, ok := <-chan1
 	assert.False(t, ok)
+	for len(chan2) > 0 {
+		<-chan2
+	}
+	closeChan2()
+	_, ok2 := <-chan2
+	assert.False(t, ok2)
 }
