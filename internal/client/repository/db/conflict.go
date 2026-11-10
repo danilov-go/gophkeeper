@@ -1,0 +1,54 @@
+package db
+
+import (
+	"context"
+
+	"github.com/danilov-go/gophkeeper/internal/models"
+)
+
+// SaveConflict сохраняет или обновляет информацию о конфликтующем секрете.
+func (s *storageDB) SaveConflict(ctx context.Context, secret models.CipherData) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	query := `INSERT OR REPLACE INTO conflicts (id, type, cipher, updated_at, version, deleted) VALUES (?, ?, ?, ?, ?, ?)`
+	deletedInt := 0
+	if secret.Deleted {
+		deletedInt = 1
+	}
+	_, err := s.db.ExecContext(ctx, query, secret.ID, secret.Type, secret.Cipher, secret.UpdatedAt, secret.Version, deletedInt)
+	return err
+}
+
+// GetConflicts возвращает все конфликтные записи.
+func (s *storageDB) GetConflicts(ctx context.Context) ([]models.CipherData, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	query := `SELECT id, type, cipher, updated_at, version, deleted FROM conflicts`
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var conflicts []models.CipherData
+	for rows.Next() {
+		var cd models.CipherData
+		var deletedInt int
+		if err := rows.Scan(&cd.ID, &cd.Type, &cd.Cipher, &cd.UpdatedAt, &cd.Version, &deletedInt); err != nil {
+			return nil, err
+		}
+		cd.Deleted = deletedInt == 1
+		conflicts = append(conflicts, cd)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return conflicts, nil
+}
+
+// DeleteConflict удаляет конфликтную запись.
+func (s *storageDB) DeleteConflict(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM conflicts WHERE id = ?`, id)
+	return err
+}

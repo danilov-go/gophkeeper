@@ -1,0 +1,97 @@
+package db
+
+import (
+	"context"
+	"encoding/json"
+	"time"
+
+	"github.com/danilov-go/gophkeeper/internal/models"
+)
+
+// GetVersion возвращает версии и время обновления всех секретов.
+func (s *storageDB) GetVersion(ctx context.Context) (map[string]models.VersionTime, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	query := `SELECT id, version, updated_at FROM secrets`
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	versions := make(map[string]models.VersionTime)
+	for rows.Next() {
+		var id string
+		var version int
+		var updatedAt time.Time
+		if err := rows.Scan(&id, &version, &updatedAt); err != nil {
+			return nil, err
+		}
+		versions[id] = models.VersionTime{
+			Version:   version,
+			UpdatedAt: updatedAt,
+		}
+	}
+	return versions, nil
+}
+
+// GetChangelog возвращает все записи из журнала изменений.
+func (s *storageDB) GetChangelog(ctx context.Context) ([]models.Changelog, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	query := `SELECT id, secret_id, secret_data FROM changelog`
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var changelog []models.Changelog
+	for rows.Next() {
+		var log models.Changelog
+		var secretData string
+		if err := rows.Scan(&log.ID, &log.SecretID, &secretData); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(secretData), &log.Secret); err != nil {
+			return nil, err
+		}
+		changelog = append(changelog, log)
+	}
+	return changelog, nil
+}
+
+// DeleteChangelog удаляет обработанные записи журнала изменений до указанного ID.
+func (s *storageDB) DeleteChangelog(ctx context.Context, id int) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	query := `DELETE FROM changelog WHERE id <= ?`
+	_, err := s.db.Exec(query, id)
+	return err
+}
+
+// SyncUpdate сохраняет или обновляет полученные с сервера секреты.
+func (s *storageDB) SyncUpdate(ctx context.Context, cipherData []models.CipherData) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	query := `INSERT OR REPLACE INTO secrets (id, type, cipher, updated_at, version, deleted) 
+			 VALUES (?, ?, ?, ?, ?, ?)`
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, cipher := range cipherData {
+		deletedInt := 0
+		if cipher.Deleted {
+			deletedInt = 1
+		}
+		_, err = tx.ExecContext(ctx, query, cipher.ID, cipher.Type, cipher.Cipher, cipher.UpdatedAt, cipher.Version, deletedInt)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}

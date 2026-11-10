@@ -1,0 +1,244 @@
+// package tui реализут текстовый пользовательский интерфейс.
+package tui
+
+import (
+	"context"
+	"iter"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/danilov-go/gophkeeper/internal/models"
+)
+
+// SyncOccurrenceMsg сообщение, уведомляющее о событии синхронизации.
+type SyncOccurrenceMsg struct{}
+
+// SecretService определяет методы для взаимодействия с бизнес логикой.
+//
+//go:generate mockery --name=SecretService --case=underscore --output=./mocks --with-expecter
+type SecretService interface {
+	Register(ctx context.Context, login, password string) error
+	Login(ctx context.Context, login, password string) error
+	Save(ctx context.Context, meta models.MetaData, data models.SecretData) (string, error)
+	GetAll(ctx context.Context, sType models.SecretType) ([]models.Secret, error)
+	Update(ctx context.Context, id string, meta models.MetaData, data models.SecretData) error
+	Delete(ctx context.Context, id string) error
+	GetFile(path string) ([]byte, error)
+	ExportFile(path string, data []byte) error
+	Logout()
+	GetConflicts(ctx context.Context) ([]models.Conflict, error)
+	FixConflict(ctx context.Context, id string, keepServer bool) error
+}
+
+type sessionState int
+
+const (
+	authState sessionState = iota
+	authFormState
+	menuState
+	listState
+	formState
+	conflictState
+)
+
+// Bulder хранит информацию о сборке.
+type Builder struct {
+	Version string
+	Date    string
+	Commit  string
+}
+
+// AppModel определяет корневую модель Bubble Tea приложения.
+type AppModel struct {
+	state      sessionState
+	service    SecretService
+	syncChan   chan<- struct{}
+	occurrence iter.Seq[struct{}]
+	authMenu   AuthMenuModel
+	authForm   AuthFormModel
+	menu       MenuModel
+	list       ListModel
+	form       FormModel
+	conflict   ConflictModel
+	builder    Builder
+}
+
+// NewAppModel создает новый экземпляр AppModel.
+func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrence iter.Seq[struct{}], builder Builder) AppModel {
+	return AppModel{
+		state:      authState,
+		service:    storage,
+		syncChan:   syncChan,
+		occurrence: occurrence,
+		authMenu:   NewAuthMenuModel(builder),
+		list:       NewListModel(storage, models.SecretType("")),
+		conflict:   NewConflictModel(storage),
+		builder:    builder,
+	}
+}
+
+// Sync ждет сигнал об успешной синхронизации и передает его в интерфейс.
+func Sync(seq iter.Seq[struct{}]) tea.Cmd {
+	return func() tea.Msg {
+		if seq == nil {
+			return nil
+		}
+		next, stop := iter.Pull(seq)
+		defer stop()
+		_, ok := next()
+		if !ok {
+			return nil
+		}
+		return SyncOccurrenceMsg{}
+	}
+}
+
+// Init запускает стартовый экран и включает фоновое ожидание синхронизации.
+func (m AppModel) Init() tea.Cmd {
+	return tea.Batch(
+		m.authMenu.Init(),
+		Sync(m.occurrence),
+	)
+}
+
+// Update обрабатывает нажатия клавиш и сигналы синхронизации, переключая экраны приложения.
+func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if keyMsg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+	}
+	switch msg.(type) {
+	case SyncOccurrenceMsg:
+		if m.state == listState && m.list.sType != "" {
+			updatedList, listCmd := m.list.Update(SyncOccurrenceMsg{})
+			m.list = updatedList.(ListModel)
+			return m, tea.Batch(listCmd, Sync(m.occurrence))
+		}
+		return m, Sync(m.occurrence)
+	}
+	switch m.state {
+	case authState:
+		updatedAuthMenu, authMenuCmd := m.authMenu.Update(msg)
+		m.authMenu = updatedAuthMenu.(AuthMenuModel)
+		if m.authMenu.chosen {
+			m.authMenu.chosen = false
+			m.state = authFormState
+			m.authForm = NewAuthFormModel(m.service, m.authMenu.registration)
+			return m, m.authForm.Init()
+		}
+		return m, authMenuCmd
+	case authFormState:
+		updatedAuthForm, authFormCmd := m.authForm.Update(msg)
+		m.authForm = updatedAuthForm.(AuthFormModel)
+		if m.authForm.success {
+			m.authForm.success = false
+			m.state = menuState
+			m.menu = NewMenuModel()
+			if m.syncChan != nil {
+				select {
+				case m.syncChan <- struct{}{}:
+				default:
+				}
+			}
+			return m, m.menu.Init()
+		}
+		if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.String() == "esc" {
+			m.state = authState
+			return m, nil
+		}
+		return m, authFormCmd
+	case menuState:
+		if keyMsg, ok := msg.(tea.KeyMsg); ok {
+			if keyMsg.String() == "q" || keyMsg.String() == "й" {
+				m.service.Logout()
+				m.state = authState
+				m.authMenu = NewAuthMenuModel(m.builder)
+				return m, m.authMenu.Init()
+			}
+			if keyMsg.String() == "c" || keyMsg.String() == "с" {
+				m.state = conflictState
+				m.conflict = NewConflictModel(m.service)
+				return m, m.conflict.Init()
+			}
+		}
+		updatedMenu, menuCmd := m.menu.Update(msg)
+		m.menu = updatedMenu.(MenuModel)
+		if m.menu.chosen {
+			m.menu.chosen = false
+			m.state = listState
+			selectedType := m.menu.options[m.menu.cursor].sType
+			m.list = NewListModel(m.service, selectedType)
+			if cachedData, err := m.service.GetAll(context.Background(), selectedType); err == nil {
+				m.list.secrets = cachedData
+			}
+			return m, m.list.Init()
+		}
+		return m, menuCmd
+	case listState:
+		if keyMsg, ok := msg.(tea.KeyMsg); ok {
+			switch keyMsg.String() {
+			case "n", "т":
+				m.form = NewFormModel(m.service, m.list.sType)
+				m.state = formState
+				return m, m.form.Init()
+			case "enter":
+				if len(m.list.secrets) == 0 {
+					return m, nil
+				}
+				secret := m.list.secrets[m.list.cursor]
+				m.form = NewEditForm(m.service, secret)
+				m.state = formState
+				return m, m.form.Init()
+			case "esc":
+				m.state = menuState
+				return m, nil
+			}
+		}
+		updatedList, listCmd := m.list.Update(msg)
+		m.list = updatedList.(ListModel)
+		return m, listCmd
+	case formState:
+		updatedForm, formCmd := m.form.Update(msg)
+		m.form = updatedForm.(FormModel)
+		if m.form.saved {
+			m.form.saved = false
+			m.state = listState
+			return m, m.list.Init()
+		}
+		if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.String() == "esc" {
+			m.form.saved = false
+			m.state = listState
+			return m, nil
+		}
+		return m, formCmd
+	case conflictState:
+		if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.String() == "esc" {
+			m.state = menuState
+			return m, nil
+		}
+		updatedConflict, conflictCmd := m.conflict.Update(msg)
+		m.conflict = updatedConflict.(ConflictModel)
+		return m, conflictCmd
+	}
+	return m, nil
+}
+
+// View отрисовывает интерфейс текущего экрана в зависимости от состояния приложения.
+func (m AppModel) View() string {
+	switch m.state {
+	case authState:
+		return m.authMenu.View()
+	case authFormState:
+		return m.authForm.View()
+	case menuState:
+		return m.menu.View()
+	case listState:
+		return m.list.View()
+	case formState:
+		return m.form.View()
+	case conflictState:
+		return m.conflict.View()
+	default:
+		return "Неизвестное состояние приложения."
+	}
+}

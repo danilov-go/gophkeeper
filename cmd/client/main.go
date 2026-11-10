@@ -1,1 +1,90 @@
 package main
+
+import (
+	"context"
+	"io"
+	"os/signal"
+	"syscall"
+
+	_ "embed"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/danilov-go/gophkeeper/internal/client/repository/db"
+	"github.com/danilov-go/gophkeeper/internal/client/sender"
+	"github.com/danilov-go/gophkeeper/internal/client/service"
+	"github.com/danilov-go/gophkeeper/internal/client/tui"
+	"github.com/danilov-go/gophkeeper/internal/client/worker"
+	"github.com/danilov-go/gophkeeper/internal/config"
+	"github.com/danilov-go/gophkeeper/internal/logger"
+	"github.com/danilov-go/gophkeeper/internal/strategy"
+)
+
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
+)
+
+//go:embed ca.crt
+var Cert []byte
+
+func main() {
+	if err := logger.Initialize("info"); err != nil {
+		panic(err)
+	}
+	cfg := &config.ConfigClient{}
+	if err := cfg.Get(); err != nil {
+		logger.Log.Sugar().Fatal("ошибка парсинга конфигурации клиента")
+	}
+	if err := cfg.Validate(); err != nil {
+		logger.Log.Sugar().Fatal(err)
+	}
+	storage, err := db.InitDB(cfg.PathDB)
+	if err != nil {
+		logger.Log.Sugar().Fatal("ошибка инициализации базы данных", "error", err)
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer stop()
+	deviceID, err := storage.GetDeviceID(ctx)
+	if deviceID == "" || err != nil {
+		logger.Log.Sugar().Fatal("ошибка получения ID устройства", "error", err)
+	}
+	var send service.Sender
+	if cfg.Protocol == "grpc" {
+		var err error
+		send, err = sender.NewGRPCSender(cfg.Net.String(), logger.Log.Sugar(), deviceID, Cert)
+		if err != nil {
+			logger.Log.Sugar().Fatalw("не удалось запустить gRPC клиент", "error", err)
+		}
+	} else {
+		send = sender.NewHTTPSender(*cfg, logger.Log.Sugar(), deviceID, Cert)
+	}
+	syncChan := make(chan struct{}, 1)
+	conflict := strategy.NewClientStrategy()
+	srvc := service.NewClientService(storage, send, conflict, syncChan)
+	syncWorker := worker.NewSyncWorker(srvc, logger.Log.Sugar(), cfg.SendInterval, cfg.Cooldown, syncChan)
+	go syncWorker.Run(ctx)
+	go func() {
+		send.ServerEvent(ctx, func() {
+			select {
+			case syncChan <- struct{}{}:
+			default:
+			}
+		})
+	}()
+	builder := tui.Builder{
+		Version: buildVersion,
+		Date:    buildDate,
+		Commit:  buildCommit,
+	}
+	appModel := tui.NewAppModel(srvc, syncChan, syncWorker.Occurrence(), builder)
+	p := tea.NewProgram(appModel)
+	if _, err := p.Run(); err != nil {
+		logger.Log.Sugar().Fatalw("ошибка интерфейса", "error", err)
+	}
+	defer func() {
+		if closer, ok := send.(io.Closer); ok {
+			_ = closer.Close()
+		}
+	}()
+}
