@@ -72,12 +72,12 @@ func main() {
 			}
 		})
 	}()
-	bulder := tui.Bulder{
+	builder := tui.Builder{
 		Version: buildVersion,
 		Date:    buildDate,
 		Commit:  buildCommit,
 	}
-	appModel := tui.NewAppModel(srvc, syncChan, syncWorker.Occurrence(), bulder)
+	appModel := tui.NewAppModel(srvc, syncChan, syncWorker.Occurrence(), builder)
 	p := tea.NewProgram(appModel)
 	if _, err := p.Run(); err != nil {
 		logger.Log.Sugar().Fatalw("ошибка интерфейса", "error", err)

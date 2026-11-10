@@ -8,6 +8,11 @@ import (
 	"github.com/danilov-go/gophkeeper/internal/models"
 )
 
+type streamID struct {
+	userID   int
+	deviceID string
+}
+
 // Observer принимает уведомления о синхронизации для конкретного устройства.
 type Observer interface {
 	GetUserID() int
@@ -35,10 +40,11 @@ func NewSyncNotifier() *SyncNotifier {
 
 // Register регистрирует устройство для получения уведомлений синхронизации.
 func (n *SyncNotifier) Register(userID int, deviceID string) (<-chan models.SyncEvent, func()) {
+	id := streamID{userID: userID, deviceID: deviceID}
 	stream := NewStream(deviceID, userID)
-	n.observers.Store(deviceID, stream)
+	n.observers.Store(id, stream)
 	unsubscribe := func() {
-		n.observers.Delete(deviceID)
+		n.observers.Delete(id)
 		stream.Close()
 	}
 	return stream.Stream(), unsubscribe
@@ -46,7 +52,8 @@ func (n *SyncNotifier) Register(userID int, deviceID string) (<-chan models.Sync
 
 // Deregister удаляет устройство.
 func (n *SyncNotifier) Deregister(o Observer) {
-	n.observers.Delete(o.GetDeviceID())
+	id := streamID{userID: o.GetUserID(), deviceID: o.GetDeviceID()}
+	n.observers.Delete(id)
 }
 
 // Notify рассылает событие всем зарегистрированным устройствам.
@@ -60,6 +67,8 @@ func (n *SyncNotifier) Notify(event models.SyncEvent) {
 		return true
 	})
 }
+
+// Close закрывает канал событий синхронизации.
 func (c *Stream) Close() {
 	close(c.ch)
 }

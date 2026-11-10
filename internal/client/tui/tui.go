@@ -41,7 +41,7 @@ const (
 )
 
 // Bulder хранит информацию о сборке.
-type Bulder struct {
+type Builder struct {
 	Version string
 	Date    string
 	Commit  string
@@ -59,20 +59,20 @@ type AppModel struct {
 	list       ListModel
 	form       FormModel
 	conflict   ConflictModel
-	bulder     Bulder
+	builder    Builder
 }
 
 // NewAppModel создает новый экземпляр AppModel.
-func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrence iter.Seq[struct{}], bulder Bulder) AppModel {
+func NewAppModel(storage SecretService, syncChan chan<- struct{}, occurrence iter.Seq[struct{}], builder Builder) AppModel {
 	return AppModel{
 		state:      authState,
 		service:    storage,
 		syncChan:   syncChan,
 		occurrence: occurrence,
-		authMenu:   NewAuthMenuModel(bulder),
+		authMenu:   NewAuthMenuModel(builder),
 		list:       NewListModel(storage, models.SecretType("")),
 		conflict:   NewConflictModel(storage),
-		bulder:     bulder,
+		builder:    builder,
 	}
 }
 
@@ -152,7 +152,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if keyMsg.String() == "q" || keyMsg.String() == "й" {
 				m.service.Logout()
 				m.state = authState
-				m.authMenu = NewAuthMenuModel(m.bulder)
+				m.authMenu = NewAuthMenuModel(m.builder)
 				return m, m.authMenu.Init()
 			}
 			if keyMsg.String() == "c" || keyMsg.String() == "с" {

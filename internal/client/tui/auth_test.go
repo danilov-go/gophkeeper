@@ -8,7 +8,7 @@ import (
 )
 
 func TestAuthMenuModel_Init(t *testing.T) {
-	m := NewAuthMenuModel(Bulder{Version: "N/A", Date: "N/A", Commit: "N/A"})
+	m := NewAuthMenuModel(Builder{Version: "N/A", Date: "N/A", Commit: "N/A"})
 	assert.Nil(t, m.Init())
 }
 
@@ -60,7 +60,7 @@ func TestAuthMenuModel_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewAuthMenuModel(Bulder{Version: "N/A", Date: "N/A", Commit: "N/A"})
+			m := NewAuthMenuModel(Builder{Version: "N/A", Date: "N/A", Commit: "N/A"})
 			m.cursor = tt.initCursor
 			currentMsg := tt.msg
 			if key, ok := tt.msg.(tea.KeyMsg); ok && (string(key.Runes) == "up" || string(key.Runes) == "down") {
@@ -105,7 +105,7 @@ func TestAuthMenuModel_View(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewAuthMenuModel(Bulder{Version: "N/A", Date: "N/A", Commit: "N/A"})
+			m := NewAuthMenuModel(Builder{Version: "N/A", Date: "N/A", Commit: "N/A"})
 			m.cursor = tt.cursor
 			text := m.View()
 			for _, expText := range tt.text {

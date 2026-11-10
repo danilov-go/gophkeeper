@@ -17,29 +17,10 @@ func NewClientStrategy() ClientStrategy {
 
 // Rules определяет правила по синхронизации для клиента.
 func (s ClientStrategy) Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction {
-	v, ok := versions[id]
-	if !ok {
-		if deleted {
-			return models.ActionSkip
-		}
-		return models.ActionUpdate
-	}
-	if version > v.Version {
-		if deleted {
-			return models.ActionDelete
-		}
-		return models.ActionUpdate
-	}
-	if version == v.Version && !updatedAt.Equal(v.UpdatedAt) {
-		if deleted {
-			return models.ActionDelete
-		}
-		return models.ActionConflict
-	}
-	return models.ActionSkip
+	return rules(id, version, updatedAt, deleted, versions, false)
 }
 
-// ClientStrategy определяет стратегию синхронизации на стороне сервера.
+// ServerStrategy определяет стратегию синхронизации на стороне сервера.
 type ServerStrategy struct{}
 
 // NewServerStrategy создает новый экземпляр NewServerStrategy.
@@ -49,10 +30,17 @@ func NewServerStrategy() ServerStrategy {
 
 // Rules определяет правила по синхронизации для сервера.
 func (s ServerStrategy) Rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions) models.SyncAction {
+	return rules(id, version, updatedAt, deleted, versions, true)
+}
+
+func rules(id string, version int, updatedAt time.Time, deleted bool, versions models.SecretVersions, keepServer bool) models.SyncAction {
 	v, ok := versions[id]
 	if !ok {
 		if deleted {
-			return models.ActionDelete
+			if keepServer {
+				return models.ActionDelete
+			}
+			return models.ActionSkip
 		}
 		return models.ActionUpdate
 	}

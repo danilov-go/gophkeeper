@@ -24,6 +24,8 @@ type MsgList struct {
 // MsgOTP событие таймера для обновления OTP-кодов.
 type MsgOTP time.Time
 
+type deletekMsg struct{}
+
 // ListModel управляет экраном просмотра, поиска и удаления секретов.
 type ListModel struct {
 	service   SecretService
@@ -164,6 +166,12 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MsgList:
 		m.statusMsg = msg.Text
 		m.err = nil
+		if m.delete {
+			return m, tea.Tick(600*time.Millisecond, func(time.Time) tea.Msg {
+				return deletekMsg{}
+			})
+		}
+	case deletekMsg:
 		m.delete = false
 		return m, nil
 	}
@@ -178,7 +186,6 @@ func (m ListModel) deleteSecret(id string) tea.Cmd {
 		if err != nil {
 			return err
 		}
-		time.Sleep(time.Millisecond * 600)
 		return MsgList{Text: "Запись успешно удалена"}
 	}
 }

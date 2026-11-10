@@ -121,7 +121,8 @@ func TestStorageDB_GetChangelog(t *testing.T) {
 			defer func() { _ = sql.Close() }()
 			tt.setupMock(mock)
 			storage := db.NewStorageDB(sql)
-			changelog, err := storage.GetChangelog()
+			ctx := t.Context()
+			changelog, err := storage.GetChangelog(ctx)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -163,7 +164,8 @@ func TestStorageDB_DeleteChangelog(t *testing.T) {
 			defer func() { _ = sql.Close() }()
 			tt.setupMock(mock)
 			storage := db.NewStorageDB(sql)
-			err = storage.DeleteChangelog(id)
+			ctx := t.Context()
+			err = storage.DeleteChangelog(ctx, id)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

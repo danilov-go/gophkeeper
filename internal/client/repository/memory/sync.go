@@ -28,7 +28,10 @@ func (m *MemStorage) GetVersion(ctx context.Context) (map[string]models.VersionT
 }
 
 // GetChangelog возвращает все записи из журнала изменений.
-func (m *MemStorage) GetChangelog() ([]models.Changelog, error) {
+func (m *MemStorage) GetChangelog(ctx context.Context) ([]models.Changelog, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.changelog == nil {
@@ -40,7 +43,10 @@ func (m *MemStorage) GetChangelog() ([]models.Changelog, error) {
 }
 
 // DeleteChangelog удаляет обработанные записи журнала изменений до указанного ID.
-func (m *MemStorage) DeleteChangelog(id int) error {
+func (m *MemStorage) DeleteChangelog(ctx context.Context, id int) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	i := 0

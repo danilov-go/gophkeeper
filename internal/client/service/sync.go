@@ -23,7 +23,7 @@ func (s *ClientService) SyncData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	changelogs, err := s.storage.GetChangelog()
+	changelogs, err := s.storage.GetChangelog(ctx)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (s *ClientService) SyncData(ctx context.Context) error {
 	}
 	if len(changelogs) > 0 {
 		for _, lg := range changelogs {
-			if err = s.storage.DeleteChangelog(lg.ID); err != nil {
+			if err = s.storage.DeleteChangelog(ctx, lg.ID); err != nil {
 				return err
 			}
 		}

@@ -36,7 +36,10 @@ func (s *storageDB) GetVersion(ctx context.Context) (map[string]models.VersionTi
 }
 
 // GetChangelog возвращает все записи из журнала изменений.
-func (s *storageDB) GetChangelog() ([]models.Changelog, error) {
+func (s *storageDB) GetChangelog(ctx context.Context) ([]models.Changelog, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	query := `SELECT id, secret_id, secret_data FROM changelog`
 	rows, err := s.db.Query(query)
 	if err != nil {
@@ -59,7 +62,10 @@ func (s *storageDB) GetChangelog() ([]models.Changelog, error) {
 }
 
 // DeleteChangelog удаляет обработанные записи журнала изменений до указанного ID.
-func (s *storageDB) DeleteChangelog(id int) error {
+func (s *storageDB) DeleteChangelog(ctx context.Context, id int) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	query := `DELETE FROM changelog WHERE id <= ?`
 	_, err := s.db.Exec(query, id)
 	return err

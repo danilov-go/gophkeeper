@@ -24,8 +24,8 @@ type Storage interface {
 	GetUser(ctx context.Context, login string) (models.LocalUser, error)
 	SyncUpdate(ctx context.Context, cipherData []models.CipherData) error
 	GetVersion(ctx context.Context) (map[string]models.VersionTime, error)
-	GetChangelog() ([]models.Changelog, error)
-	DeleteChangelog(id int) error
+	GetChangelog(ctx context.Context) ([]models.Changelog, error)
+	DeleteChangelog(ctx context.Context, id int) error
 	SaveConflict(ctx context.Context, secret models.CipherData) error
 	GetConflicts(ctx context.Context) ([]models.CipherData, error)
 	DeleteConflict(ctx context.Context, id string) error

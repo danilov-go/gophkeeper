@@ -111,7 +111,7 @@ func TestAppModel_Update(t *testing.T) {
 			if tt.setupMock != nil {
 				tt.setupMock(service)
 			}
-			m := NewAppModel(service, syncChan, occurrence, Bulder{Version: "N/A", Date: "N/A", Commit: "N/A"})
+			m := NewAppModel(service, syncChan, occurrence, Builder{Version: "N/A", Date: "N/A", Commit: "N/A"})
 			m.state = tt.state
 			if tt.setupModel != nil {
 				tt.setupModel(&m)
@@ -139,7 +139,7 @@ func TestAppModel_SyncAndInit(t *testing.T) {
 	}
 	service := mocks.NewSecretService(t)
 	service.On("GetAll", mock.Anything, mock.Anything).Return([]models.Secret{}, nil).Maybe()
-	m := NewAppModel(service, syncChan, occurrence, Bulder{Version: "N/A", Date: "N/A", Commit: "N/A"})
+	m := NewAppModel(service, syncChan, occurrence, Builder{Version: "N/A", Date: "N/A", Commit: "N/A"})
 	cmd := m.Init()
 	assert.NotNil(t, cmd)
 	syncCmd := Sync(occurrence)
@@ -161,7 +161,7 @@ func TestAppModel_SyncAndInit(t *testing.T) {
 func TestAppModel_View(t *testing.T) {
 	service := mocks.NewSecretService(t)
 	service.On("GetAll", mock.Anything, mock.Anything).Return([]models.Secret{}, nil).Maybe()
-	m := NewAppModel(service, nil, nil, Bulder{Version: "N/A", Date: "N/A", Commit: "N/A"})
+	m := NewAppModel(service, nil, nil, Builder{Version: "N/A", Date: "N/A", Commit: "N/A"})
 	tests := []struct {
 		name  string
 		state sessionState

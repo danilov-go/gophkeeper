@@ -37,7 +37,7 @@ func TestClientService_SyncData(t *testing.T) {
 			name: "положительный тест",
 			setupMock: func(mStorage *mocks.Storage, mSender *mocks.Sender, mStrategy *mocks.Strategy) {
 				mStorage.On("GetVersion", mock.Anything).Return(map[string]models.VersionTime(versions), nil).Once()
-				mStorage.On("GetChangelog").Return(changelogs, nil).Once()
+				mStorage.On("GetChangelog", mock.Anything).Return(changelogs, nil).Once()
 				mSender.On("Sync", mock.Anything, map[string]models.VersionTime(versions), changelogs).Return(cipherData, nil).Once()
 				mStrategy.On("Rules", secretID, 2, now, false, versions).Return(models.ActionConflict).Once()
 				mStrategy.On("Rules", secretID1, 3, now, false, versions).Return(models.ActionUpdate).Once()
@@ -47,7 +47,7 @@ func TestClientService_SyncData(t *testing.T) {
 				mStorage.On("DeleteSecret", mock.Anything, secretID2, true).Return(nil).Once()
 				expectedUpdates := []models.CipherData{cipherData[1]}
 				mStorage.On("SyncUpdate", mock.Anything, expectedUpdates).Return(nil).Once()
-				mStorage.On("DeleteChangelog", 5).Return(nil).Once()
+				mStorage.On("DeleteChangelog", mock.Anything, 5).Return(nil).Once()
 			},
 			wantErr: false,
 		},
@@ -62,7 +62,7 @@ func TestClientService_SyncData(t *testing.T) {
 			name: "ошибка отправки на server",
 			setupMock: func(mStorage *mocks.Storage, mSender *mocks.Sender, mStrategy *mocks.Strategy) {
 				mStorage.On("GetVersion", mock.Anything).Return(map[string]models.VersionTime(versions), nil).Once()
-				mStorage.On("GetChangelog").Return(changelogs, nil).Once()
+				mStorage.On("GetChangelog", mock.Anything).Return(changelogs, nil).Once()
 				mSender.On("Sync", mock.Anything, map[string]models.VersionTime(versions), changelogs).Return(nil, errTest).Once()
 			},
 			wantErr: true,
